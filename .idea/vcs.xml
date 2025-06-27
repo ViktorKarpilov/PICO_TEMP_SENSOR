@@ -7,6 +7,8 @@
     <mapping directory="$USER_HOME$/Documents/Pico-v1.5.1/pico-sdk/lib/lwip" vcs="Git" />
     <mapping directory="$USER_HOME$/Documents/Pico-v1.5.1/pico-sdk/lib/mbedtls" vcs="Git" />
     <mapping directory="$USER_HOME$/Documents/Pico-v1.5.1/pico-sdk/lib/tinyusb" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/build/_deps/picotool-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/picotool-src" vcs="Git" />
   </component>
 </project>
