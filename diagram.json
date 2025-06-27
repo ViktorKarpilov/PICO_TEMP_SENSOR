@@ -1,13 +1,46 @@
 {
   "version": 1,
-  "author": "Your Name",
+  "author": "Viktor",
   "editor": "wokwi",
   "parts": [
-    { "type": "wokwi-pi-pico", "id": "pico", "top": 0, "left": 0 },
-    { "type": "wokwi-led", "id": "led1", "top": 20, "left": 150, "attrs": { "color": "red" } }
+    {
+      "type": "wokwi-pi-pico",
+      "id": "pico",
+      "top": 0,
+      "left": 0,
+      "attrs": { "env": "arduino-community" }
+    },
+    {
+      "type": "board-grove-oled-sh1107",
+      "id": "display",
+      "top": 66.97,
+      "left": 127.9,
+      "attrs": { "env": "arduino-community" }
+    },
+    { "type": "wokwi-led", "id": "led1", "top": -22.8, "left": -73, "attrs": { "color": "red" } },
+    {
+      "type": "wokwi-led",
+      "id": "led2",
+      "top": 24.2,
+      "left": -73,
+      "attrs": { "color": "yellow" }
+    },
+    { "type": "wokwi-led", "id": "led3", "top": 73.2, "left": -73, "attrs": { "color": "green" } },
+    { "type": "wokwi-led", "id": "led4", "top": 122, "left": -73, "attrs": { "color": "white" } }
   ],
   "connections": [
-    [ "pico:GP25", "led1:A", "green", [] ],
-    [ "led1:C", "pico:GND.8", "black", [] ]
-  ]
+    [ "pico:GP0", "$serialMonitor:RX", "", [] ],
+    [ "pico:GP1", "$serialMonitor:TX", "", [] ],
+    [ "led1:C", "pico:GND.1", "black", [ "v0" ] ],
+    [ "led1:A", "pico:GP1", "blue", [ "v0" ] ],
+    [ "led2:A", "pico:GP5", "blue", [ "v0" ] ],
+    [ "led2:C", "pico:GND.2", "black", [ "v0" ] ],
+    [ "led3:A", "pico:GP9", "blue", [ "v0" ] ],
+    [ "led3:C", "pico:GND.3", "black", [ "v0" ] ],
+    [ "led4:A", "pico:GP13", "blue", [ "v0" ] ],
+    [ "led4:C", "pico:GND.4", "black", [ "v0" ] ],
+    [ "display:VCC", "pico:3V3", "red", [ "h48", "v-83.25" ] ],
+    [ "display:GND.1", "pico:GND.5", "black", [ "h38.4", "v-86.4", "h-268.8", "v118.35" ] ]
+  ],
+  "dependencies": {}
 }

@@ -13,7 +13,11 @@ pico_sdk_init()
 set(CMAKE_CXX_STANDARD 20)
 
 # Create executable
-add_executable(TEMP_SENSOR_C main.cpp)
+add_executable(TEMP_SENSOR_C main.cpp
+        src/main_loop.cpp
+        src/src.h
+        src/init.cpp
+        src/config.h)
 
 # Link libraries
 target_link_libraries(TEMP_SENSOR_C pico_stdlib)
