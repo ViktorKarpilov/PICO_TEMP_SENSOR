@@ -1,4 +1,4 @@
 [wokwi]
 version = 1
-firmware = "build/TEMP_SENSOR_C.uf2"
-elf = "build/TEMP_SENSOR_C"
+firmware = "build/TEMP_SENSOR_C_wokwi.uf2"
+elf = "build/TEMP_SENSOR_C.elf.elf"
