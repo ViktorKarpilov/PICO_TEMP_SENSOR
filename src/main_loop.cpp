@@ -5,8 +5,6 @@
 
 void loop()
 {
-    gpio_put(LED::RED_DIOD, true);
-    sleep_ms(LED::DIOD_SLEEP_DURATION);
-    gpio_put(LED::RED_DIOD, false);
-    sleep_ms(LED::DIOD_SLEEP_DURATION);
+    gpio_put(CONFIG::RED_DIODE, !gpio_get(CONFIG::RED_DIODE));
+    sleep_ms(CONFIG::DIODE_SLEEP_DURATION);
 }
