@@ -4,10 +4,14 @@
 
 #include "config.h"
 #include "src.h"
+#include "enviroment_sensor/enviroment_sensor.h"
 #include "hardware/gpio.h"
 #include "i2c_display/SSD1306.h"
 #include "pico/cyw43_arch.h"
 #include "pico/stdio_usb.h"
+#include "spi_display/OLED13.h"
+#include "spi_display/GUI/GUI_Paint.h"
+#include "spi_display/OLED/OLED_1in3_c.h"
 
 int init()
 {
@@ -41,15 +45,25 @@ int init()
         printf("=== NO USB - USING FALLBACK ===\n");
     }
 
-    return 0;
+    OLED_Init();
+    // OLED_1in3_C_test();
+    
+    // const auto envSensor = EnvironmentSensor(0x76);
+    if (EnvironmentSensor::initiate())
+    {
+        printf("envSensor initialization error\n");
+        return 1;
+    }
 
-    // Initialize I2C at 400kHz
-    // i2c_init(CONFIG::I2CChip, 400 * 1000);
-    // gpio_set_function(CONFIG::SDA_PIN, GPIO_FUNC_I2C);
-    // gpio_set_function(CONFIG::SCL_PIN, GPIO_FUNC_I2C);
-    //
-    // SSD1306 display(CONFIG::SSD1306_ADDR);
-    // display.turn_on();
+    printf("envSensor initialization done\n");
+    // EnvironmentSensor::initiate();
+    const double temp = EnvironmentSensor::readTemperature();
+
+    printf("Temperature: %f\n", temp);
+    Paint_DrawString_EN(10, 0, "Temperature: ", &Font16, WHITE, BLACK);
+    Paint_DrawNum(10, 30, temp, &Font8,2, WHITE, BLACK);
+    
+    return 0;
 }
 
 void setupUART()
