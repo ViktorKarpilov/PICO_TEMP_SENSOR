@@ -6,6 +6,7 @@
 #define SRC_H
 
 void loop();
-void init();
+int init();
+void setupUART();
 
 #endif //SRC_H
