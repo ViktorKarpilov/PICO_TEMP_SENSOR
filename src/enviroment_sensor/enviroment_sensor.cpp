@@ -44,7 +44,7 @@ double EnvironmentSensor::readTemperature()
     return pres_raw[1];
 }
 
-double EnvironmentSensor::readHumility()
+double EnvironmentSensor::readHumidity()
 {
     BME280_value();
     return pres_raw[2];

@@ -1,6 +1,10 @@
 #ifndef CONFIG_H
 #define CONFIG_H
+#include <cstdint>
+#include <lwip/ip4_addr.h>
+
 #include "hardware/i2c.h"
+#include "network/access_point/dnsserver/DnsTable.h"
 
 namespace CONFIG
 {
@@ -25,6 +29,25 @@ namespace CONFIG
 
     // SSD1306 config
     constexpr uint8_t SSD1306_ADDR = 0x3C;
+
+    // WiFi AP config
+    constexpr const char* AP_NAME = "picow_test";
+    constexpr const char* PASSWORD = nullptr;
+    constexpr ip4_addr_t AP_IP = make_ip4_addr(7, 7, 7, 7);
+
+    // DNS config
+    constexpr ip4_addr_t DNS_ADDRESS = AP_IP;
+    constexpr ip4_addr_t NETMASK = make_ip4_addr(255, 255, 255, 0);
+    constexpr int DNS_PORT = 53;
+
+    // DHCP server
+    constexpr int DHCP_SERVER_PORT = 67;
+    constexpr int DHCP_CLIENT_PORT = 68;
+    // constexpr uint DEFAULT_LEASE_TIME_S = 24 * 60 * 60; // 24 hours
+    constexpr uint DEFAULT_LEASE_TIME_S = 30; // 30 secodns
+    constexpr uint MAC_ADDRESS_LEN = 6;
+    constexpr uint MAX_DHCP_CLIENTS = 10;
+    constexpr std::uint8_t DHCP_BASE_IP = 8;
 }
 
 #endif //CONFIG_H

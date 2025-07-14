@@ -22,7 +22,7 @@ class EnvironmentSensor
         [[nodiscard]] static int initiate();
         [[nodiscard]] static double readTemperature();
         [[nodiscard]] static double readPressure();
-        [[nodiscard]] static double readHumility();
+        [[nodiscard]] static double readHumidity();
 };
 
 #endif //ENVIROMENT_SENSOR_H
