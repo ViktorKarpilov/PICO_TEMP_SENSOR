@@ -6,12 +6,10 @@
 #include "src.h"
 #include "enviroment_sensor/enviroment_sensor.h"
 #include "hardware/gpio.h"
-#include "i2c_display/SSD1306.h"
 #include "pico/cyw43_arch.h"
 #include "pico/stdio_usb.h"
 #include "spi_display/OLED13.h"
-#include "spi_display/GUI/GUI_Paint.h"
-#include "spi_display/OLED/OLED_1in3_c.h"
+#include "network/CaptivePortal.h"
 
 int init()
 {
@@ -20,7 +18,7 @@ int init()
     gpio_set_dir(CONFIG::RED_DIODE, GPIO_OUT);
     gpio_put(CONFIG::RED_DIODE, true);
 
-    // Initialize the CYW43 architecture (essential for Pico W/2W)
+    // Initialize the CYW43 architecture
     if (cyw43_arch_init()) {
         printf("Failed to initialize CYW43\n");
         return -1;
@@ -45,23 +43,20 @@ int init()
         printf("=== NO USB - USING FALLBACK ===\n");
     }
 
-    OLED_Init();
-    // OLED_1in3_C_test();
+    if (OLED_Init())
+    {
+        printf("OLED initialization error\n");
+        return 1;
+    }
     
-    // const auto envSensor = EnvironmentSensor(0x76);
     if (EnvironmentSensor::initiate())
     {
         printf("envSensor initialization error\n");
         return 1;
     }
 
-    printf("envSensor initialization done\n");
-    // EnvironmentSensor::initiate();
-    const double temp = EnvironmentSensor::readTemperature();
-
-    printf("Temperature: %f\n", temp);
-    Paint_DrawString_EN(10, 0, "Temperature: ", &Font16, WHITE, BLACK);
-    Paint_DrawNum(10, 30, temp, &Font8,2, WHITE, BLACK);
+    printf("AP initiation \n");
+    CaptivePortal::initiate();
     
     return 0;
 }

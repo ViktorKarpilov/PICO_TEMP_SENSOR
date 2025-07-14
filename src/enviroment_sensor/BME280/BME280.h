@@ -22,8 +22,6 @@
 #ifndef __BME280_H__
 #define __BME280_H__
 
-#define true  1
-#define false 0
 /***********  BME280_TEST  ****************/
 
 #define BME280_ADDR 0x76

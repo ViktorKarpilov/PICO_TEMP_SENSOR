@@ -29,5 +29,6 @@ int OLED_1in3_C_test(void);
 void Paint_Clear(UWORD Color);
 int OLED_Init();
 
+extern UBYTE* BlackImage;
 
 #endif //OLED13_H

@@ -21,7 +21,6 @@
     
     while (true)
     {
-        printf("Loop\n");
         loop();
     }
 }
