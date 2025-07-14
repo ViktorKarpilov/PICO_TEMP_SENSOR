@@ -1,5 +1,6 @@
 #include "pico/stdlib.h"
 #include <cstdio>
+#include <src/network/http_server/HttpServer.h>
 
 #include "src/config.h"
 #include "src/src.h"

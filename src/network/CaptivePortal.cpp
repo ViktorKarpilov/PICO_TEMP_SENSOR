@@ -9,6 +9,7 @@
 
 #include "access_point/dhcpserver/DhcpServer.h"
 #include "access_point/dnsserver/DnsServer.h"
+#include "http_server/HttpServer.h"
 
 CaptivePortal::CaptivePortal()
 = default;
@@ -35,6 +36,9 @@ int CaptivePortal::initiate()
         printf("Failed to initialize DNS server\n");
         return -1;
     }
+
+    auto http_server = HttpServer();
+    http_server.init(CONFIG::WEB_SERVER_PORT);
 
     printf("Captive portal is live!\n");
 

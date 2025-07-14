@@ -48,6 +48,9 @@ namespace CONFIG
     constexpr uint MAC_ADDRESS_LEN = 6;
     constexpr uint MAX_DHCP_CLIENTS = 10;
     constexpr std::uint8_t DHCP_BASE_IP = 8;
+
+    // WEB SERVER CONFIG
+    constexpr int WEB_SERVER_PORT = 80;
 }
 
 #endif //CONFIG_H

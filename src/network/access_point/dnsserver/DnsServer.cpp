@@ -165,10 +165,10 @@ udp_recv_fn DnsServer::udp_process_request_function = [](void* arg, struct udp_p
     {
         result_address = pair->second; // Get the IP
     }
-
+    
     const auto response = create_dns_response(package_data, package_len, &result_address);
     udp_sendto(control_block, response, sender_ip, client_port);
-    printf("DNS: response!\n");
+    printf("DNS: response! Query: %s, Response: %s\n", query.name, ip4addr_ntoa(&result_address));
 
     pbuf_free(package);
 };
