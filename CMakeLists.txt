@@ -30,9 +30,12 @@ message(STATUS "========================")
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-add_executable(TEMP_SENSOR_C main.cpp lwipopts.h
-        src/network/access_point/dhcpserver/DhcpServer.cpp
-        src/network/access_point/dhcpserver/DhcpServer.h)
+execute_process(
+        COMMAND python ${CMAKE_SOURCE_DIR}/tools/html_to_cpp.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+
+add_executable(TEMP_SENSOR_C main.cpp lwipopts.h generated/config_html.h generated/status_html.h)
 
 pico_enable_stdio_usb(TEMP_SENSOR_C 1)
 pico_enable_stdio_uart(TEMP_SENSOR_C 0)

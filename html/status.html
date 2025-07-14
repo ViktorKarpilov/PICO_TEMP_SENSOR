@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧊 Freezer Configuration</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      margin: 0; padding: 20px; color: white;
+    }
+    .container {
+      max-width: 400px; margin: 0 auto;
+      background: rgba(255,255,255,0.1);
+      padding: 30px; border-radius: 15px;
+      backdrop-filter: blur(10px);
+    }
+    h1 { text-align: center; margin-bottom: 30px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    input {
+      width: 100%; padding: 12px; border: none;
+      border-radius: 8px; font-size: 16px;
+      background: rgba(255,255,255,0.9);
+    }
+    button {
+      width: 100%; padding: 15px;
+      background: #ff6b6b; color: white;
+      border: none; border-radius: 8px;
+      font-size: 18px; font-weight: bold;
+      cursor: pointer; transition: all 0.3s;
+    }
+    button:hover { background: #ff5252; transform: translateY(-2px); }
+    .status {
+      text-align: center; margin-top: 20px;
+      padding: 10px; border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+    }
+    .emoji { font-size: 2em; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="emoji">🧊❄️🌡️</div>
+  <h1>Freezer Monitor Setup</h1>
+
+  <form method="POST" action="/config">
+    <div class="form-group">
+      <label for="ssid">WiFi Network:</label>
+      <input type="text" id="ssid" name="ssid" placeholder="Enter WiFi name" required>
+    </div>
+
+    <div class="form-group">
+      <label for="password">WiFi Password:</label>
+      <input type="password" id="password" name="password" placeholder="Enter WiFi password">
+    </div>
+
+    <div class="form-group">
+      <label for="temp_threshold">Temperature Alert (°C):</label>
+      <input type="number" id="temp_threshold" name="temp_threshold" value="-18" min="-50" max="10">
+    </div>
+
+    <div class="form-group">
+      <label for="dashboard_url">Dashboard URL:</label>
+      <input type="url" id="dashboard_url" name="dashboard_url" placeholder="https://your-dashboard.com">
+    </div>
+
+    <button type="submit">🚀 Configure Freezer Monitor</button>
+  </form>
+
+  <div class="status">
+    <strong>Current Status:</strong><br>
+    📡 AP Mode Active<br>
+    🌡️ Temperature: <span id="temp">-18°C</span><br>
+    💧 Humidity: <span id="humidity">45%</span>
+  </div>
+</div>
+
+<script>
+  // Update sensor readings every 5 seconds
+  setInterval(() => {
+    fetch('/api/status')
+            .then(r => r.json())
+            .then(data => {
+              document.getElementById('temp').textContent = data.temperature + '°C';
+              document.getElementById('humidity').textContent = data.humidity + '%';
+            })
+            .catch(e => console.log('Status update failed'));
+  }, 5000);
+</script>
+</body>
+</html>

@@ -10,6 +10,7 @@
 #include "pico/stdio_usb.h"
 #include "spi_display/OLED13.h"
 #include "network/CaptivePortal.h"
+#include "network/http_server/HttpServer.h"
 
 int init()
 {
@@ -57,7 +58,7 @@ int init()
 
     printf("AP initiation \n");
     CaptivePortal::initiate();
-    
+
     return 0;
 }
 

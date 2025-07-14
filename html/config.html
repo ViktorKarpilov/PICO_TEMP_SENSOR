@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧊 Freezer Configuration</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0; padding: 20px; color: white; min-height: 100vh;
+        }
+        .container {
+            max-width: 450px; margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 40px; border-radius: 20px;
+            backdrop-filter: blur(15px); box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center; margin-bottom: 30px; font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .form-group { margin-bottom: 25px; }
+        label {
+            display: block; margin-bottom: 8px; font-weight: 600;
+            font-size: 1.1em; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        input {
+            width: 100%; padding: 15px; border: none;
+            border-radius: 12px; font-size: 16px; box-sizing: border-box;
+            background: rgba(255,255,255,0.9); transition: all 0.3s ease;
+        }
+        input:focus {
+            outline: none; background: rgba(255,255,255,1);
+            transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        button {
+            width: 100%; padding: 18px; margin-top: 20px;
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            color: white; border: none; border-radius: 12px;
+            font-size: 18px; font-weight: bold; cursor: pointer;
+            transition: all 0.3s ease; text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        button:hover {
+            background: linear-gradient(45deg, #ff5252, #ff7979);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255,107,107,0.4);
+        }
+        .status {
+            text-align: center; margin-top: 30px;
+            padding: 20px; border-radius: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .emoji { font-size: 3em; margin-bottom: 15px; }
+        .temp-display {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 15px; margin-top: 15px;
+        }
+        .temp-item {
+            background: rgba(255,255,255,0.1); padding: 10px;
+            border-radius: 8px; text-align: center;
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        .footer {
+            text-align: center; margin-top: 30px; opacity: 0.8;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="emoji pulse">🧊❄️🌡️</div>
+    <h1>Freezer Monitor</h1>
+
+    <form method="POST" action="/config" id="configForm">
+        <div class="form-group">
+            <label for="ssid">📶 WiFi Network:</label>
+            <input type="text" id="ssid" name="ssid" placeholder="Enter your WiFi network name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">🔐 WiFi Password:</label>
+            <input type="password" id="password" name="password" placeholder="Enter WiFi password">
+        </div>
+
+        <div class="form-group">
+            <label for="temp_threshold">🌡️ Temperature Alert (°C):</label>
+            <input type="number" id="temp_threshold" name="temp_threshold"
+                   value="-18" min="-50" max="10" step="0.1">
+        </div>
+
+        <div class="form-group">
+            <label for="dashboard_url">📊 Dashboard URL:</label>
+            <input type="url" id="dashboard_url" name="dashboard_url"
+                   placeholder="https://your-dashboard.com/api">
+        </div>
+
+        <button type="submit" id="submitBtn">🚀 Configure Monitor</button>
+    </form>
+
+    <div class="status">
+        <strong>📡 Current Status</strong>
+        <div class="temp-display">
+            <div class="temp-item">
+                <div>🌡️ Temperature</div>
+                <div id="temp" style="font-size: 1.2em; font-weight: bold;">Loading...</div>
+            </div>
+            <div class="temp-item">
+                <div>💧 Humidity</div>
+                <div id="humidity" style="font-size: 1.2em; font-weight: bold;">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Powered by Raspberry Pi Pico W 🚀<br>
+        Lucky Sevens Network: 7.7.7.7 🎰
+    </div>
+</div>
+
+<script>
+    // Update sensor readings every 3 seconds
+    function updateStatus() {
+        fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('temp').textContent = data.temperature + '°C';
+                document.getElementById('humidity').textContent = data.humidity + '%';
+            })
+            .catch(error => {
+                console.log('Status update failed:', error);
+                document.getElementById('temp').textContent = 'Error';
+                document.getElementById('humidity').textContent = 'Error';
+            });
+    }
+
+    // Update immediately and then every 3 seconds
+    updateStatus();
+    setInterval(updateStatus, 3000);
+
+    // Form submission handler
+    document.getElementById('configForm').addEventListener('submit', function(e) {
+        const btn = document.getElementById('submitBtn');
+        btn.textContent = '⏳ Configuring...';
+        btn.disabled = true;
+    });
+</script>
+</body>
+</html>
