@@ -56,6 +56,7 @@ void DhcpServer::deinit() {
     if (control_block != nullptr) {
         udp_remove(control_block);
         control_block = nullptr;
+        printf("DHCP: Server deinitialized\n");
     }
 }
 
@@ -64,7 +65,6 @@ udp_recv_fn DhcpServer::udp_process_request_function = [](void* arg, struct udp_
                                                          const ip_addr_t* sender_ip, 
                                                          u16_t sender_port) -> void {
     [[maybe_unused]] auto* server = static_cast<DhcpServer*>(arg);
-    printf("DHCP: Client request!\n");
     
     if (packet->tot_len < DHCP_MIN_PACKET_SIZE) {
         printf("DHCP: Packet too small (%d bytes)\n", packet->tot_len);
@@ -111,7 +111,6 @@ udp_recv_fn DhcpServer::udp_process_request_function = [](void* arg, struct udp_
             break;
     }
 
-    printf("DHCP: Client connected!\n");
     pbuf_free(packet);
 };
 

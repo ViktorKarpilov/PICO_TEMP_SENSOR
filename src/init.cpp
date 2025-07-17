@@ -12,6 +12,8 @@
 #include "network/CaptivePortal.h"
 #include "network/http_server/HttpServer.h"
 
+static CaptivePortal portal;
+
 int init()
 {
     stdio_init_all();
@@ -57,7 +59,8 @@ int init()
     }
 
     printf("AP initiation \n");
-    CaptivePortal::initiate();
+
+    portal.initiate();
 
     return 0;
 }

@@ -15,6 +15,9 @@
 class DnsServer {
 public:
     explicit DnsServer();
+    ~DnsServer();
+
+    void deinit();
     int init();
     
 private:

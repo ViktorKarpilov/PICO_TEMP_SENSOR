@@ -19,7 +19,7 @@
     gpio_put(CONFIG::GREEN_DIODE, true);
     printf("=== INITIALIZATION COMPLETE ===\n");
     printf("If you see this, stdio works!\n");
-    
+
     while (true)
     {
         loop();

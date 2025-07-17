@@ -24,21 +24,27 @@ int CaptivePortal::initiate()
     netif_set_addr(netif_default, &CONFIG::AP_IP, &CONFIG::NETMASK, &CONFIG::AP_IP);
     cyw43_arch_lwip_end();
 
-    const auto dhcp_server = new DhcpServer();
-    if (dhcp_server ->init(CONFIG::DNS_ADDRESS, CONFIG::NETMASK, CONFIG::DHCP_BASE_IP) != 0) {
+    printf("=== NETWORK INTERFACE CHECK ===\n");
+    cyw43_arch_lwip_begin(); 
+    cyw43_arch_lwip_end();
+
+    if (this->dhcpServer.init(CONFIG::DNS_ADDRESS, CONFIG::NETMASK, CONFIG::DHCP_BASE_IP) != 0) {
         printf("Failed to initialize DHCP server\n");
         return -1;
     }
 
-    const auto dns_server = new DnsServer();
-    if (dns_server->init())
+    if (this->dnsServer.init())
     {
         printf("Failed to initialize DNS server\n");
         return -1;
     }
 
-    auto http_server = HttpServer();
-    http_server.init(CONFIG::WEB_SERVER_PORT);
+    HttpServer::test_can_bind();
+    if (this->httpServer.init(CONFIG::WEB_SERVER_PORT))
+    {
+        printf("Failed to initialize http server\n");
+        return -1;
+    }
 
     printf("Captive portal is live!\n");
 

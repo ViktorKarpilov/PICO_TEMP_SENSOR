@@ -57,7 +57,7 @@ struct dns_header_t
     }
 };
 
-typedef struct dns_answer
+typedef struct __attribute__((packed)) dns_answer
 {
     uint16_t name;
     uint16_t type;
@@ -85,8 +85,8 @@ int parse_domain_name(const uint8_t* data, const int max_len, uint16_t* type, ui
 
         if (len == 0)
         {
-            *type = data[pos + 1] << 8 | data[pos + 2];
-            *Class = data[pos + 3] << 8 | data[pos + 4];
+            *type = data[pos] << 8 | data[pos + 1];
+            *Class = data[pos + 2] << 8 | data[pos + 3];
             return pos + 4;
         }
 
@@ -105,8 +105,125 @@ int parse_domain_name(const uint8_t* data, const int max_len, uint16_t* type, ui
         domain_name[domain_name_pos++] = '.';
     }
 
+    if (domain_name_pos > 0) {
+        domain_name[domain_name_pos - 1] = '\0';
+    }
     return -1;
 }
+
+// Function to create IPv4 (A record) response
+pbuf* create_dns_response_ipv4(const uint8_t* original_query, const int query_len, const ip4_addr_t* ip_address)
+{
+    const uint response_size = query_len + sizeof(dns_answer_t);
+    pbuf* response = pbuf_alloc(PBUF_TRANSPORT, response_size, PBUF_RAM);
+    auto* resp_data = static_cast<uint8_t*>(response->payload);
+
+    // 1. Copy original query
+    memcpy(resp_data, original_query, query_len);
+
+    // 2. Modify header flags
+    resp_data[2] = 0x84; // Response + Authoritative
+    resp_data[3] = 0x00; // No error
+
+    resp_data[6] = 0x00;
+    resp_data[7] = 0x01; // 1 answer
+
+    // 3. Fill answer struct for A record
+    dns_answer_t answer;
+    answer.name = htons(0xC00C);  // Pointer to question name
+    answer.type = htons(1);       // A record (IPv4)
+    answer.Class = htons(1);      // IN class
+    answer.ttl = htonl(300);      // 5 minutes TTL
+    answer.len = htons(4);        // 4 bytes for IPv4
+    answer.addr = htonl(ip4_addr_to_uint32(ip_address));
+
+    // 4. Append answer (exactly at query_len, no extra bytes!)
+    memcpy(resp_data + query_len, &answer, sizeof(answer));
+
+    return response;
+}
+
+// Function to create NXDOMAIN (rejection) response
+pbuf* create_dns_response_nxdomain(const uint8_t* original_query, const int query_len)
+{
+    // Response is same size as query (no answer section)
+    pbuf* response = pbuf_alloc(PBUF_TRANSPORT, query_len, PBUF_RAM);
+    auto* resp_data = static_cast<uint8_t*>(response->payload);
+
+    // Copy original query
+    memcpy(resp_data, original_query, query_len);
+
+    // Modify header flags for NXDOMAIN
+    resp_data[2] = 0x84; // Response + Authoritative
+    resp_data[3] = 0x03; // NXDOMAIN error code
+    resp_data[7] = 0x00; // 0 answers
+
+    return response;
+}
+
+void print_pbuf_bytes(struct pbuf* p) {
+    struct pbuf* current = p;
+    
+    while (current != NULL) {
+        uint8_t* payload = (uint8_t*)current->payload;
+        
+        for (int i = 0; i < current->len; i++) {
+            printf("%02X ", payload[i]);
+        }
+        
+        current = current->next;
+    }
+    printf("\n");
+}
+
+// Updated main UDP callback with proper type handling
+udp_recv_fn DnsServer::udp_process_request_function = [](void* arg, struct udp_pcb* control_block, struct pbuf* package,
+                                                         const ip_addr_t* sender_ip, const u16_t client_port) -> void
+{
+    [[maybe_unused]] auto context = static_cast<DnsServer*>(arg);
+    
+    printf("🔍 DNS: Request from %s:%d\n", ip4addr_ntoa(ip_2_ip4(sender_ip)), client_port);
+
+    const auto package_data = static_cast<uint8_t*>(package->payload);
+    const auto package_len = package->len;
+    const auto package_header = dns_header_t(package_data);
+
+    if (package_header.flags & 0x8000) {
+        printf("Ignoring response packet\n");
+        pbuf_free(package);
+        return;
+    }
+
+    dns_query query{};
+    parse_domain_name(package_data, package_len, &query.type, &query.Class, query.name);
+
+    pbuf* response;
+
+    if (query.type == 1) {  // A record (IPv4) - WE CAN HANDLE THIS
+        ip4_addr_t result_address = CONFIG::AP_IP;
+        
+        // Check if we have specific mapping
+        const auto pair = ip4_addresses.find(query.name);
+        if (pair != ip4_addresses.end()) {
+            result_address = pair->second;
+        }
+        
+        response = create_dns_response_ipv4(package_data, package_len, &result_address);
+        printf("DNS Response: %s -> %s\n", query.name, ip4addr_ntoa(&result_address));
+        
+    } else if (query.type == 28) {  // AAAA record (IPv6) - REJECT
+        printf("❌ Rejecting IPv6 query (we don't support IPv6)\n");
+        response = create_dns_response_nxdomain(package_data, package_len);
+        
+    } else {  // Other types - REJECT
+        printf("❌ Rejecting unsupported query type %d\n", query.type);
+        response = create_dns_response_nxdomain(package_data, package_len);
+    }
+
+    udp_sendto(control_block, response, sender_ip, client_port);
+    pbuf_free(response);
+    pbuf_free(package);
+};
 
 pbuf* create_dns_response(const uint8_t* original_query, const int query_len, const ip4_addr_t* ip_address)
 {
@@ -139,39 +256,20 @@ pbuf* create_dns_response(const uint8_t* original_query, const int query_len, co
     return response;
 }
 
-udp_recv_fn DnsServer::udp_process_request_function = [](void* arg, struct udp_pcb* control_block, struct pbuf* package,
-                                                         const ip_addr_t* sender_ip, const u16_t client_port) -> void
+DnsServer::~DnsServer()
 {
-    [[maybe_unused]] auto context = static_cast<DnsServer*>(arg);
-    printf("DNS: Client request!\n");
+    deinit();
+}
 
-    const auto package_data = static_cast<uint8_t*>(package->payload);
-    const auto package_len = package->len;
-    const auto package_header = dns_header_t(package_data);
-
-    if (package_header.flags & 0x8000)
+void DnsServer::deinit()
+{
+    if (this->control_block != nullptr)
     {
-        printf("Ignoring response packet\n");
-        pbuf_free(package);
-        return;
+        udp_disconnect(this->control_block);
+        this->control_block = nullptr;
+        printf("DNS: Server deinitialized\n");
     }
-
-    dns_query query{};
-    parse_domain_name(package_data, package_len, &query.type, &query.Class, query.name);
-    ip4_addr_t result_address = CONFIG::AP_IP;
-
-    const auto pair = ip4_addresses.find(query.name);
-    if (pair != ip4_addresses.end())
-    {
-        result_address = pair->second; // Get the IP
-    }
-    
-    const auto response = create_dns_response(package_data, package_len, &result_address);
-    udp_sendto(control_block, response, sender_ip, client_port);
-    printf("DNS: response! Query: %s, Response: %s\n", query.name, ip4addr_ntoa(&result_address));
-
-    pbuf_free(package);
-};
+}
 
 static int bind_callback(udp_pcb** udp, void* cb_data, const udp_recv_fn cb_udp_recv)
 {
