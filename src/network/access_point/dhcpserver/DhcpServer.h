@@ -38,10 +38,11 @@ enum class DhcpOption : std::uint8_t {
     MAX_MSG_SIZE = 57,
     VENDOR_CLASS_ID = 60,
     CLIENT_ID = 61,
+    CAPTIVE_PORTAL = 114,
     END = 255
 };
 
-struct dhcp_message_t {
+struct __attribute__((packed))dhcp_message_t {
     std::uint8_t op;           // message opcode
     std::uint8_t htype;        // hardware address type  
     std::uint8_t hlen;         // hardware address length

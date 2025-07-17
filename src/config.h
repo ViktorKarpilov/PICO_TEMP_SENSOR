@@ -43,8 +43,8 @@ namespace CONFIG
     // DHCP server
     constexpr int DHCP_SERVER_PORT = 67;
     constexpr int DHCP_CLIENT_PORT = 68;
-    // constexpr uint DEFAULT_LEASE_TIME_S = 24 * 60 * 60; // 24 hours
-    constexpr uint DEFAULT_LEASE_TIME_S = 30; // 30 secodns
+    constexpr uint DEFAULT_LEASE_TIME_S = 24 * 60 * 60; // 24 hours
+    // constexpr uint DEFAULT_LEASE_TIME_S = 30; // 30 secodns
     constexpr uint MAC_ADDRESS_LEN = 6;
     constexpr uint MAX_DHCP_CLIENTS = 10;
     constexpr std::uint8_t DHCP_BASE_IP = 8;

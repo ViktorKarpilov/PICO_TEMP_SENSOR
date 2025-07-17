@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🧊 Freezer Configuration</title>
+    <title> Freezer Configuration</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -78,58 +78,52 @@
 </head>
 <body>
 <div class="container">
-    <div class="emoji pulse">🧊❄️🌡️</div>
+    <div class="emoji pulse"></div>
     <h1>Freezer Monitor</h1>
 
     <form method="POST" action="/config" id="configForm">
         <div class="form-group">
-            <label for="ssid">📶 WiFi Network:</label>
+            <label for="ssid">WiFi Network:</label>
             <input type="text" id="ssid" name="ssid" placeholder="Enter your WiFi network name" required>
         </div>
 
         <div class="form-group">
-            <label for="password">🔐 WiFi Password:</label>
+            <label for="password">WiFi Password:</label>
             <input type="password" id="password" name="password" placeholder="Enter WiFi password">
         </div>
 
         <div class="form-group">
-            <label for="temp_threshold">🌡️ Temperature Alert (°C):</label>
+            <label for="temp_threshold">Temperature Alert (°C):</label>
             <input type="number" id="temp_threshold" name="temp_threshold"
                    value="-18" min="-50" max="10" step="0.1">
         </div>
 
-        <div class="form-group">
-            <label for="dashboard_url">📊 Dashboard URL:</label>
-            <input type="url" id="dashboard_url" name="dashboard_url"
-                   placeholder="https://your-dashboard.com/api">
-        </div>
-
-        <button type="submit" id="submitBtn">🚀 Configure Monitor</button>
+        <button type="submit" id="submitBtn">Configure Monitor</button>
     </form>
 
     <div class="status">
-        <strong>📡 Current Status</strong>
+        <strong>Current Status</strong>
         <div class="temp-display">
             <div class="temp-item">
-                <div>🌡️ Temperature</div>
+                <div>Temperature</div>
                 <div id="temp" style="font-size: 1.2em; font-weight: bold;">Loading...</div>
             </div>
             <div class="temp-item">
-                <div>💧 Humidity</div>
+                <div>Humidity</div>
                 <div id="humidity" style="font-size: 1.2em; font-weight: bold;">Loading...</div>
             </div>
         </div>
     </div>
 
     <div class="footer">
-        Powered by Raspberry Pi Pico W 🚀<br>
-        Lucky Sevens Network: 7.7.7.7 🎰
+        Powered by Raspberry Pi Pico W <br>
     </div>
 </div>
 
 <script>
-    // Update sensor readings every 3 seconds
+    console.log("Script section initiated")
     function updateStatus() {
+        console.log("Update status")
         fetch('/api/status')
             .then(response => response.json())
             .then(data => {
