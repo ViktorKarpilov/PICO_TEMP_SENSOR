@@ -8,6 +8,10 @@
 #include <lwip/tcp.h>
 #include <string>
 
+#define LWIP_DEBUG 1
+#define TCP_DEBUG LWIP_DBG_ON
+#define HTTPD_DEBUG LWIP_DBG_ON
+
 // Forward declaration for connection state
 struct http_connection_state;
 
