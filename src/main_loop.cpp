@@ -38,39 +38,7 @@ void loop()
         
         last_display_update = current_time;
     }
-
-    static uint32_t last_check = 0;
-    if (to_ms_since_boot(get_absolute_time()) - last_check > 5000) {
-        cyw43_arch_lwip_begin();
-        if (netif_default) {
-            printf("📊 Interface: UP=%s, LINK=%s, TCP_PCBs=%d\n",
-                   netif_is_up(netif_default) ? "YES" : "NO",
-                   netif_is_link_up(netif_default) ? "YES" : "NO",
-                   tcp_active_pcbs ? 1 : 0);  // Check if TCP is working
-        }
-        cyw43_arch_lwip_end();
-        last_check = to_ms_since_boot(get_absolute_time());
-    }
-
-    // In your main loop, check packet processing
-    static uint32_t last_stats = 0;
-    static uint32_t last_tcp_count = 0;
-
-    if (to_ms_since_boot(get_absolute_time()) - last_stats > 5000) {
-        uint32_t tcp_count = 0;
-         tcp_pcb *pcb = tcp_active_pcbs;
-        while (pcb) {
-            tcp_count++;
-            pcb = pcb->next;
-        }
-    
-        if (tcp_count != last_tcp_count) {
-            printf("📊 TCP PCBs changed: %d\n", tcp_count);
-            last_tcp_count = tcp_count;
-        }
-        last_stats = to_ms_since_boot(get_absolute_time());
-    }
     
     cyw43_arch_poll();  // Process Wi-Fi events
-    sleep_ms(10);  // 10ms instead of 1000ms!
+    sleep_ms(10);
 }

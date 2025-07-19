@@ -12,6 +12,13 @@
 #include <src/enviroment_sensor/enviroment_sensor.h>
 
 #include "generated/config_html.h"
+#define HTTP_SERVER_DEBUG 0
+
+#ifdef HTTP_SERVER_DEBUG
+    #define HTTP_SERVER_PRINT(fmt, ...) printf(fmt, ##__VA_ARGS__)
+#else
+    #define HTTP_SERVER_PRINT(fmt, ...) ((void)0)
+#endif
 
 constexpr size_t MAX_REQUEST_SIZE = 8192;
 
@@ -20,9 +27,10 @@ struct http_connection_state
 {
     std::string response_data;
     size_t bytes_sent;
+    size_t bytes_queued;
     bool response_ready;
 
-    http_connection_state() : bytes_sent(0), response_ready(false)
+    http_connection_state() : bytes_sent(0), response_ready(false), bytes_queued(0)
     {
     }
 };
@@ -38,12 +46,10 @@ HttpServer::~HttpServer()
 
 int HttpServer::init(uint16_t port)
 {
-    printf("🌐 HTTP: Starting server on port %d\n", port);
-
     server_pcb = tcp_new();
     if (server_pcb == nullptr)
     {
-        printf("❌ HTTP: Failed to create TCP PCB\n");
+        HTTP_SERVER_PRINT("❌ HTTP: Failed to create TCP PCB\n");
         return -1;
     }
 
@@ -51,7 +57,7 @@ int HttpServer::init(uint16_t port)
     err_t err = tcp_bind(server_pcb, IP_ADDR_ANY, port);
     if (err != ERR_OK)
     {
-        printf("❌ HTTP: Failed to bind to port %d - Error: %d\n", port, err);
+        HTTP_SERVER_PRINT("❌ HTTP: Failed to bind to port %d - Error: %d\n", port, err);
         tcp_close(server_pcb);
         server_pcb = nullptr;
         return -1;
@@ -61,7 +67,7 @@ int HttpServer::init(uint16_t port)
     server_pcb = tcp_listen(server_pcb);
     if (server_pcb == nullptr)
     {
-        printf("❌ HTTP: Failed to listen\n");
+        HTTP_SERVER_PRINT("❌ HTTP: Failed to listen\n");
         return -1;
     }
 
@@ -69,10 +75,7 @@ int HttpServer::init(uint16_t port)
     tcp_arg(server_pcb, this);
     tcp_accept(server_pcb, accept_callback);
 
-    printf("🎉 HTTP: Server successfully listening on port %d\n", port);
-    printf("🔧 HTTP Debug: PCB = %p\n", server_pcb);
-    printf("🔧 HTTP PCB State: %d (should be %d for LISTEN)\n",
-           server_pcb->state, LISTEN);
+    HTTP_SERVER_PRINT("🎉 HTTP: Server successfully listening on port %d\n", port);
     return 0;
 }
 
@@ -82,7 +85,7 @@ void HttpServer::deinit()
     {
         tcp_close(server_pcb);
         server_pcb = nullptr;
-        printf("HTTP: Server deinitialized\n");
+        HTTP_SERVER_PRINT("HTTP: Server deinitialized\n");
     }
 }
 
@@ -90,11 +93,11 @@ err_t HttpServer::accept_callback(void* arg, tcp_pcb* newpcb, err_t err)
 {
     if (err != ERR_OK || newpcb == nullptr)
     {
-        printf("❌ HTTP: Accept error: %d\n", err);
+        HTTP_SERVER_PRINT("❌ HTTP: Accept error: %d\n", err);
         return ERR_VAL;
     }
 
-    printf("✅ HTTP: New connection from %s:%d\n",
+    HTTP_SERVER_PRINT("✅ HTTP: New connection from %s:%d\n",
            ip4addr_ntoa(ip_2_ip4(&newpcb->remote_ip)), newpcb->remote_port);
 
     // Create connection state for this client
@@ -119,14 +122,14 @@ err_t HttpServer::recv_callback(void* arg, tcp_pcb* tpcb, pbuf* p, err_t err)
     
     if (err != ERR_OK)
     {
-        printf("❌ HTTP: Receive error: %d\n", err);
+        HTTP_SERVER_PRINT("❌ HTTP: Receive error: %d\n", err);
         cleanup_connection(tpcb, conn_state);
         return ERR_ABRT;
     }
 
     if (p == nullptr)
     {
-        printf("HTTP: Client closed connection\n");
+        HTTP_SERVER_PRINT("HTTP: Client closed connection\n");
         cleanup_connection(tpcb, conn_state);
         return ERR_OK;
     }
@@ -138,35 +141,36 @@ err_t HttpServer::recv_callback(void* arg, tcp_pcb* tpcb, pbuf* p, err_t err)
     request_buffer[request_len] = '\0';
     std::string request(request_buffer);
 
-    printf("HTTP: Request received (%.100s...)\n", request.c_str());
+    HTTP_SERVER_PRINT("HTTP: Request received (%.100s...)\n", request.c_str());
 
     // Build response (same logic as before)
     std::string response;
     if (is_api_request(request))
     {
         response = build_status_api_response();
-        printf("HTTP: Serving API request\n");
+        HTTP_SERVER_PRINT("HTTP: Serving API request\n");
     }
     else if (is_connectivity_check(request))
     {
         response = build_connectivity_check_response(request);
-        printf("HTTP: Connectivity check response\n");
+        HTTP_SERVER_PRINT("HTTP: Connectivity check response\n");
     }
     else if (is_config_request(request))
     {
         response = build_freezer_config_page();
-        printf("HTTP: Serving config page\n");
+        HTTP_SERVER_PRINT("HTTP: Serving config page, length: %d\n", response.length());
     }
     else
     {
         response = build_captive_portal_response();
-        printf("HTTP: Redirecting to captive portal\n");
+        HTTP_SERVER_PRINT("HTTP: Redirecting to captive portal\n");
     }
 
     // Store response in connection state
     conn_state->response_data = response;
     conn_state->response_ready = true;
-    conn_state->bytes_sent = 0; // RESET to 0 for new response
+    conn_state->bytes_sent = 0;
+    conn_state->bytes_queued = 0;
 
     // Tell lwIP we've processed the received data
     tcp_recved(tpcb, p->tot_len);
@@ -177,7 +181,7 @@ err_t HttpServer::recv_callback(void* arg, tcp_pcb* tpcb, pbuf* p, err_t err)
     if (write_err != ERR_OK && write_err != ERR_MEM)
     {
         // ERR_MEM is OK - just means TCP buffer is full, will retry later
-        printf("❌ HTTP: Failed to send response: %d\n", write_err);
+        HTTP_SERVER_PRINT("❌ HTTP: Failed to send response: %d\n", write_err);
         cleanup_connection(tpcb, conn_state);
         return ERR_ABRT;
     }
@@ -189,27 +193,23 @@ err_t HttpServer::sent_callback(void* arg, tcp_pcb* tpcb, u16_t len)
 {
     auto* conn_state = static_cast<http_connection_state*>(arg);
     
-    // This is the ONLY place where we increment bytes_sent
-    // because 'len' tells us exactly how many bytes TCP actually sent
     conn_state->bytes_sent += len;
     
-    printf("HTTP: TCP confirmed sent %d bytes, total: %zu/%zu\n",
-           len, conn_state->bytes_sent, conn_state->response_data.length());
-
-    if (conn_state->bytes_sent >= conn_state->response_data.length())
+    HTTP_SERVER_PRINT("HTTP: TCP confirmed sent %d bytes, total confirmed: %zu/%zu (queued: %zu)\n",
+           len, conn_state->bytes_sent, conn_state->response_data.length(), conn_state->bytes_queued);
+    
+    if (conn_state->bytes_sent >= conn_state->bytes_queued && 
+        conn_state->bytes_queued >= conn_state->response_data.length())
     {
-        // All data sent, close connection
-        printf("HTTP: Response complete, closing connection\n");
+        HTTP_SERVER_PRINT("HTTP: Response complete, closing connection\n");
         cleanup_connection(tpcb, conn_state);
     }
-    else
+    else if (conn_state->bytes_queued < conn_state->response_data.length())
     {
-        // Send remaining data
-        printf("HTTP: Sending next chunk...\n");
         err_t write_err = send_response_data(tpcb, conn_state);
-        if (write_err != ERR_OK)
+        if (write_err != ERR_OK && write_err != ERR_MEM)
         {
-            printf("❌ HTTP: Failed to send remaining data: %d\n", write_err);
+            HTTP_SERVER_PRINT("❌ HTTP: Failed to queue remaining data: %d\n", write_err);
             cleanup_connection(tpcb, conn_state);
         }
     }
@@ -220,7 +220,7 @@ err_t HttpServer::sent_callback(void* arg, tcp_pcb* tpcb, u16_t len)
 err_t HttpServer::poll_callback(void* arg, tcp_pcb* tpcb)
 {
     // Connection timeout - clean up
-    printf("HTTP: Connection timeout, cleaning up\n");
+    HTTP_SERVER_PRINT("HTTP: Connection timeout, cleaning up\n");
     auto* conn_state = static_cast<http_connection_state*>(arg);
     cleanup_connection(tpcb, conn_state);
     return ERR_ABRT;
@@ -228,7 +228,7 @@ err_t HttpServer::poll_callback(void* arg, tcp_pcb* tpcb)
 
 void HttpServer::error_callback(void* arg, err_t err)
 {
-    printf("❌ HTTP: Connection error: %d\n", err);
+    HTTP_SERVER_PRINT("❌ HTTP: Connection error: %d\n", err);
     // Connection already closed by lwIP, just clean up our state
     auto* conn_state = static_cast<http_connection_state*>(arg);
     if (conn_state != nullptr)
@@ -239,67 +239,46 @@ void HttpServer::error_callback(void* arg, err_t err)
 
 err_t HttpServer::send_response_data(tcp_pcb* tpcb, http_connection_state* conn_state)
 {
-    if (!conn_state->response_ready || conn_state->bytes_sent >= conn_state->response_data.length())
+    if (!conn_state->response_ready || conn_state->bytes_queued >= conn_state->response_data.length())
     {
         return ERR_OK;
     }
-
-    if (conn_state->response_data.length() < 4096) { // Small response threshold
-        // Send everything at once
-        err_t err = tcp_write(tpcb, conn_state->response_data.c_str(), 
-                             conn_state->response_data.length(), TCP_WRITE_FLAG_COPY);
-        if (err == ERR_OK) {
-            tcp_output(tpcb);
-            conn_state->bytes_sent = conn_state->response_data.length(); // Mark as complete
-        }
-        return err;
-    }
-
-    // Calculate how much data to send
-    size_t remaining = conn_state->response_data.length() - conn_state->bytes_sent;
-    size_t tcp_send_buffer_space = static_cast<size_t>(tcp_sndbuf(tpcb));
+    
+    size_t remaining = conn_state->response_data.length() - conn_state->bytes_queued;
+    size_t tcp_send_buffer_space = tcp_sndbuf(tpcb);
     
     if (tcp_send_buffer_space == 0)
     {
-        printf("TCP: Send buffer full, waiting...\n");
-        return ERR_OK; // Send buffer full, wait for sent callback
+        HTTP_SERVER_PRINT("TCP: Send buffer full, waiting...\n");
+        return ERR_OK;
     }
-
-    // Take minimum of what we want to send and what TCP can accept
+    
     size_t to_send = std::min(remaining, tcp_send_buffer_space);
     
-    // Get pointer to the data we haven't sent yet
-    const char* data_ptr = conn_state->response_data.c_str() + conn_state->bytes_sent;
+    const char* data_ptr = conn_state->response_data.c_str() + conn_state->bytes_queued;
     
-    printf("=== CHUNK DEBUG ===\n");
-    printf("Attempting to send: bytes %zu-%zu (%zu bytes)\n", 
-           conn_state->bytes_sent, conn_state->bytes_sent + to_send, to_send);
-    printf("TCP buffer space: %zu bytes\n", tcp_send_buffer_space);
-    printf("Chunk content: %.50s...\n", data_ptr);
-    printf("==================\n");
-
-    // Send the data - CRITICAL: tcp_write might queue less than requested!
+    HTTP_SERVER_PRINT("HTTP: Queueing %zu bytes (offset: %zu)\n", to_send, conn_state->bytes_queued);
+    
+    // Send the data
     err_t err = tcp_write(tpcb, data_ptr, to_send, TCP_WRITE_FLAG_COPY);
     
     if (err == ERR_OK)
     {
-        // Force TCP to actually send the data
+        conn_state->bytes_queued += to_send;
         err_t output_err = tcp_output(tpcb);
+
         if (output_err != ERR_OK)
         {
-            printf("❌ TCP output failed: %d\n", output_err);
+            HTTP_SERVER_PRINT("❌ TCP output failed: %d\n", output_err);
             return output_err;
         }
         
-        // IMPORTANT: Do NOT increment bytes_sent here!
-        // TCP might not have sent all the data yet.
-        // Only increment in sent_callback() when we know exactly how much was sent.
-        
-        printf("✅ TCP write queued successfully\n");
+        HTTP_SERVER_PRINT("HTTP: Successfully queued %zu bytes, total queued: %zu/%zu\n", 
+                         to_send, conn_state->bytes_queued, conn_state->response_data.length());
     }
     else
     {
-        printf("❌ TCP write failed: %d\n", err);
+        HTTP_SERVER_PRINT("❌ TCP write failed: %d\n", err);
     }
     
     return err;
@@ -412,12 +391,12 @@ std::string HttpServer::build_status_api_response()
 
 bool HttpServer::test_can_bind()
 {
-    printf("Testing if we can bind to port 80...\n");
+    HTTP_SERVER_PRINT("Testing if we can bind to port 80...\n");
 
     tcp_pcb* test_pcb = tcp_new();
     if (!test_pcb)
     {
-        printf("❌ Cannot create TCP PCB\n");
+        HTTP_SERVER_PRINT("❌ Cannot create TCP PCB\n");
         return false;
     }
 
@@ -426,10 +405,10 @@ bool HttpServer::test_can_bind()
 
     if (err != ERR_OK)
     {
-        printf("❌ Cannot bind to port 80, error code: %d\n", err);
+        HTTP_SERVER_PRINT("❌ Cannot bind to port 80, error code: %d\n", err);
         return false;
     }
 
-    printf("✅ Can bind to port 80\n");
+    HTTP_SERVER_PRINT("✅ Can bind to port 80\n");
     return true;
 }

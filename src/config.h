@@ -39,6 +39,7 @@ namespace CONFIG
     constexpr ip4_addr_t DNS_ADDRESS = AP_IP;
     constexpr ip4_addr_t NETMASK = make_ip4_addr(255, 255, 255, 0);
     constexpr int DNS_PORT = 53;
+    #define DSN_DEBUG 0
 
     // DHCP server
     constexpr int DHCP_SERVER_PORT = 67;
@@ -48,6 +49,7 @@ namespace CONFIG
     constexpr uint MAC_ADDRESS_LEN = 6;
     constexpr uint MAX_DHCP_CLIENTS = 10;
     constexpr std::uint8_t DHCP_BASE_IP = 8;
+    #define DHCP_DEBUG 0
 
     // WEB SERVER CONFIG
     constexpr int WEB_SERVER_PORT = 80;
