@@ -9,10 +9,9 @@
 #include "pico/cyw43_arch.h"
 #include "pico/stdio_usb.h"
 #include "spi_display/OLED13.h"
-#include "network/CaptivePortal.h"
-#include "network/http_server/HttpServer.h"
+#include "network/wifi_service/WifiService.h"
 
-static CaptivePortal portal;
+static WifiService wifi_service;
 
 int init()
 {
@@ -60,7 +59,7 @@ int init()
 
     printf("AP initiation \n");
 
-    portal.initiate();
+    wifi_service.turn_on_captive_portal();
 
     return 0;
 }

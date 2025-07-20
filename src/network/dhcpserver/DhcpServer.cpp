@@ -55,7 +55,7 @@ int DhcpServer::init(const ip4_addr_t& server_ip, const ip4_addr_t& netmask, std
            ip4_addr3(&server_ip), ip4_addr4(&server_ip));
 #endif
     
-    return 0;
+    return ERR_OK;
 }
 
 void DhcpServer::deinit() {
