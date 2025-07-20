@@ -35,7 +35,7 @@ struct http_connection_state
     }
 };
 
-HttpServer::HttpServer() : server_pcb(nullptr)
+HttpServer::HttpServer(WifiService *wifi_service) : server_pcb(nullptr), wifi_service(wifi_service)
 {
 }
 
@@ -145,25 +145,29 @@ err_t HttpServer::recv_callback(void* arg, tcp_pcb* tpcb, pbuf* p, err_t err)
 
     // Build response (same logic as before)
     std::string response;
-    if (is_api_request(request))
+    const auto type = determine_request_type(request);
+
+    switch (type)
     {
-        response = build_status_api_response();
-        HTTP_SERVER_PRINT("HTTP: Serving API request\n");
-    }
-    else if (is_connectivity_check(request))
-    {
-        response = build_connectivity_check_response(request);
-        HTTP_SERVER_PRINT("HTTP: Connectivity check response\n");
-    }
-    else if (is_config_request(request))
-    {
-        response = build_freezer_config_page();
-        HTTP_SERVER_PRINT("HTTP: Serving config page, length: %d\n", response.length());
-    }
-    else
-    {
-        response = build_captive_portal_response();
-        HTTP_SERVER_PRINT("HTTP: Redirecting to captive portal\n");
+        case StatusRequest:
+            response = build_status_api_response();
+            HTTP_SERVER_PRINT("HTTP: Serving API request\n");
+            break;
+        case ConfigRequest:
+            response = build_freezer_config_page();
+            HTTP_SERVER_PRINT("HTTP: Serving config page, length: %d\n", response.length());
+            break;
+        case ConnectionResponse:
+            // TODO
+            break;
+        case ConnectivityCheck:
+            response = build_connectivity_check_response(request);
+            HTTP_SERVER_PRINT("HTTP: Connectivity check response\n");
+            break;
+        case Unknown:
+            response = build_captive_portal_response();
+            HTTP_SERVER_PRINT("HTTP: Redirecting to captive portal\n");
+            break;
     }
 
     // Store response in connection state
@@ -302,6 +306,16 @@ void HttpServer::cleanup_connection(tcp_pcb* tpcb, http_connection_state* conn_s
     }
 }
 
+#pragma region RequestParsers
+
+RequestType HttpServer::determine_request_type(const std::string& request)
+{
+    for (const auto& [type_check_function, request_type] : request_types_reference_table) {
+        if (type_check_function(request)) return request_type;
+    }
+    return Unknown;
+}
+
 bool is_android_internet_check(const std::string& request)
 {
     return request.find("connectivitycheck.gstatic.com") != std::string::npos ||
@@ -333,6 +347,14 @@ bool HttpServer::is_api_request(const std::string& request)
     return request.find("GET /api/status") != std::string::npos;
 }
 
+bool HttpServer::is_connection_response(const std::string& request)
+{
+    return request.find("POST /api/connection") != std::string::npos;
+}
+
+#pragma endregion RequestParsers
+
+#pragma region ResponseBuilders
 std::string HttpServer::build_connectivity_check_response(const std::string& request)
 {
     if (is_android_internet_check(request))
@@ -388,6 +410,8 @@ std::string HttpServer::build_status_api_response()
         "Connection: close\r\n"
         "\r\n" + json;
 }
+
+#pragma endregion ResponseBuilders
 
 bool HttpServer::test_can_bind()
 {

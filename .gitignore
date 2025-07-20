@@ -2,3 +2,4 @@
 /build/
 generated/config_html.h
 generated/status_html.h
+/.vscode/

@@ -4,7 +4,7 @@
 #include <lwip/ip4_addr.h>
 
 #include "hardware/i2c.h"
-#include "network/access_point/dnsserver/DnsTable.h"
+#include "network/dnsserver/DnsTable.h"
 
 namespace CONFIG
 {
