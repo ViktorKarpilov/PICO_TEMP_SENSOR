@@ -16,8 +16,8 @@ public:
     WifiService();
     ~WifiService();
 
-    int discover_identifiers();
-    int turn_on_captive_portal();
+    int discover_identifiers() const;
+    int turn_on_captive_portal() const;
     int connect_user_network(std::string ssid, std::string password);
 };
 
