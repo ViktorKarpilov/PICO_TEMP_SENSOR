@@ -5,24 +5,29 @@
 #include "WifiService.h"
 
 #include <pico/cyw43_arch.h>
-#include <src/network/captive_portal/CaptivePortal.h>
 #include <src/network/dhcpserver/DhcpServer.h>
 #include <src/network/dnsserver/DnsServer.h>
+#include <src/network/http_server/HttpServer.h>
 
 enum wifi_mode
 {
     Offline = 0,
     CaptivePortalMode,
-    StationMode
+    StationMode,
+    WifiScanningMode,
 };
 
 struct wifi_state
 {
     wifi_mode mode = Offline;
-    CaptivePortal *portal = new CaptivePortal();
+    wifi_mode next_mode = Offline;
+
     DhcpServer *dhcp = new DhcpServer();
     DnsServer *dns= new DnsServer();
-    HttpServer *http = new HttpServer();
+    HttpServer *http{};
+
+    uint8_t ssids_list[50][32]{};
+    int ssids_count = 0;
 
     std::string user_network_pass;
     std::string user_network_ssid;
@@ -31,10 +36,44 @@ struct wifi_state
 WifiService::WifiService()
 {
     this->state = new wifi_state();
+    this->state->http = new HttpServer(this);
 }
 WifiService::~WifiService() = default;
 
-int WifiService::turn_on_captive_portal()
+
+int scan_result(void* env, const cyw43_ev_scan_result_t* result)
+{
+    const auto state = static_cast<wifi_state*>(env);
+
+    if (result == nullptr) {
+        state->mode = state->next_mode;
+        state->next_mode = Offline;
+        return 0;
+    }
+
+    if (state->ssids_count < 50) {
+        memcpy(state->ssids_list[state->ssids_count], result->ssid, result->ssid_len);
+        state->ssids_count++;
+    }
+
+    return 0;
+}
+
+int WifiService::discover_identifiers() const
+{
+    this->state->next_mode = this->state->mode;
+    this->state->mode = WifiScanningMode;
+    cyw43_wifi_scan_options_t scan_options = {};
+
+    if (cyw43_wifi_scan(&cyw43_state, &scan_options, this->state, scan_result))
+    {
+        return ERR_CONN;
+    }
+
+    return ERR_OK;
+}
+
+int WifiService::turn_on_captive_portal() const
 {
     if (this->state->mode == CaptivePortalMode)
     {
