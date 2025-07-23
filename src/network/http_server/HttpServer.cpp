@@ -102,6 +102,8 @@ class HttpServer::HttpServerCommunication
         std::string response;
         const auto type = determine_request_type(request);
 
+        printf("Type: %d", type);
+
         switch (type)
         {
         case StatusRequest:
@@ -113,7 +115,8 @@ class HttpServer::HttpServerCommunication
             HTTP_SERVER_PRINT("HTTP: Serving config page, length: %d\n", response.length());
             break;
         case ConnectionResponse:
-            // TODO
+            response = connection_request_handler(request);
+            HTTP_SERVER_PRINT("HTTP: Handling connection response\n");
             break;
         case ConnectivityCheck:
             response = build_connectivity_check_response(request);
@@ -153,9 +156,6 @@ class HttpServer::HttpServerCommunication
         auto* conn_state = static_cast<http_connection_state*>(arg);
 
         conn_state->bytes_sent += len;
-
-        HTTP_SERVER_PRINT("HTTP: TCP confirmed sent %d bytes, total confirmed: %zu/%zu (queued: %zu)\n",
-                          len, conn_state->bytes_sent, conn_state->response_data.length(), conn_state->bytes_queued);
 
         if (conn_state->bytes_sent >= conn_state->bytes_queued &&
             conn_state->bytes_queued >= conn_state->response_data.length())
@@ -213,8 +213,6 @@ class HttpServer::HttpServerCommunication
 
         const char* data_ptr = conn_state->response_data.c_str() + conn_state->bytes_queued;
 
-        HTTP_SERVER_PRINT("HTTP: Queueing %zu bytes (offset: %zu)\n", to_send, conn_state->bytes_queued);
-
         // Send the data
         err_t err = tcp_write(tpcb, data_ptr, to_send, TCP_WRITE_FLAG_COPY);
 
@@ -228,9 +226,6 @@ class HttpServer::HttpServerCommunication
                 HTTP_SERVER_PRINT("❌ TCP output failed: %d\n", output_err);
                 return output_err;
             }
-
-            HTTP_SERVER_PRINT("HTTP: Successfully queued %zu bytes, total queued: %zu/%zu\n",
-                              to_send, conn_state->bytes_queued, conn_state->response_data.length());
         }
         else
         {
@@ -323,6 +318,17 @@ class HttpServer::HttpServerCommunication
         }
 
         return build_captive_portal_response();
+    }
+
+    static std::string connection_request_handler(const std::string& request)
+    {
+        printf("Connection request: %s", request.c_str());
+
+        return "HTTP/1.1 302 Found\r\n"
+            "Location: http://7.7.7.7/config\r\n"
+            "Content-Length: 0\r\n"
+            "Connection: close\r\n"
+            "\r\n";
     }
 
     static std::string build_captive_portal_response()
