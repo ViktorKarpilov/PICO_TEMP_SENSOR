@@ -38,7 +38,9 @@ execute_process(
 add_executable(TEMP_SENSOR_C main.cpp lwipopts.h generated/config_html.h generated/status_html.h
         src/network/wifi_service/WifiService.cpp
         src/network/wifi_service/WifiService.h
-        src/network/wifi_service/WifiService.cpp)
+        src/network/wifi_service/WifiService.cpp
+        src/network/http_server/Helpers/HTTPHelper.cpp
+        src/network/http_server/Helpers/HTTPHelper.cpp)
 
 pico_enable_stdio_usb(TEMP_SENSOR_C 1)
 pico_enable_stdio_uart(TEMP_SENSOR_C 0)

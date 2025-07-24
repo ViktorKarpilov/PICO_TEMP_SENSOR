@@ -10,6 +10,7 @@
 #include "lwip/pbuf.h"
 #include <src/config.h>
 #include <src/enviroment_sensor/enviroment_sensor.h>
+#include "Helpers/HTTPHelper.cpp"
 
 #include "generated/config_html.h"
 #define HTTP_SERVER_DEBUG 0
@@ -20,17 +21,17 @@
     #define HTTP_SERVER_PRINT(fmt, ...) ((void)0)
 #endif
 
-constexpr size_t MAX_REQUEST_SIZE = 8192;
-
 // Connection state structure for each client
 struct http_connection_state
 {
     std::string response_data;
     size_t bytes_sent;
     size_t bytes_queued;
+
+    size_t bytes_received;
     bool response_ready;
 
-    http_connection_state() : bytes_sent(0), response_ready(false), bytes_queued(0)
+    http_connection_state() : bytes_sent(0), bytes_queued(0), response_ready(false)
     {
     }
 };
@@ -46,7 +47,7 @@ HttpServer::~HttpServer()
 
 class HttpServer::HttpServerCommunication
 {
-    public:
+public:
     static err_t accept_callback(void* arg, tcp_pcb* newpcb, err_t err)
     {
         if (err != ERR_OK || newpcb == nullptr)
@@ -71,7 +72,7 @@ class HttpServer::HttpServerCommunication
         return ERR_OK;
     }
 
-    static err_t recv_callback(void* arg, tcp_pcb* tpcb, pbuf* p, err_t err)
+    static err_t recv_callback(void* arg, tcp_pcb* tpcb, pbuf* package, err_t err)
     {
         auto* conn_state = static_cast<http_connection_state*>(arg);
 
@@ -82,19 +83,20 @@ class HttpServer::HttpServerCommunication
             return ERR_ABRT;
         }
 
-        if (p == nullptr)
+        if (package == nullptr)
         {
             HTTP_SERVER_PRINT("HTTP: Client closed connection\n");
             cleanup_connection(tpcb, conn_state);
             return ERR_OK;
         }
 
-        // Copy the HTTP request (same as before)
-        char request_buffer[MAX_REQUEST_SIZE];
-        size_t request_len = pbuf_copy_partial(p, request_buffer,
-                                               std::min(static_cast<size_t>(p->tot_len), MAX_REQUEST_SIZE - 1), 0);
-        request_buffer[request_len] = '\0';
-        std::string request(request_buffer);
+        if (package->tot_len > CONFIG::MAX_REQUEST_SIZE - 1) {
+            return ERR_VAL;
+        }
+
+        HTTP_SERVER_PRINT("HTTP: Request start parsing");
+
+        auto const request = parse_request_package(package);
 
         HTTP_SERVER_PRINT("HTTP: Request received (%.100s...)\n", request.c_str());
 
@@ -135,8 +137,8 @@ class HttpServer::HttpServerCommunication
         conn_state->bytes_queued = 0;
 
         // Tell lwIP we've processed the received data
-        tcp_recved(tpcb, p->tot_len);
-        pbuf_free(p);
+        tcp_recved(tpcb, package->tot_len);
+        pbuf_free(package);
 
         // Try to send the response immediately
         err_t write_err = send_response_data(tpcb, conn_state);
@@ -301,7 +303,7 @@ class HttpServer::HttpServerCommunication
 
     inline static std::pair<RequestChecker, RequestType> request_types_reference_table[] = {
         {is_connectivity_check, ConnectivityCheck},
-        {is_config_request, ConfigRequest}, 
+        {is_config_request, ConfigRequest},
         {is_api_request, StatusRequest},
         {is_connection_response, ConnectionResponse}
     };

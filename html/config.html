@@ -119,7 +119,8 @@
 
     function updateStatus() {
         console.log("Update status")
-        fetch('/api/status')
+        // fetch('/api/status')
+        fetch('http://localhost:8080')
             .then(response => response.json())
             .then(data => {
                 document.getElementById('temp').textContent = data.temperature + '°C';
@@ -148,7 +149,7 @@
         const formData = new FormData(form);
 
         try {
-            fetch('/api/connection', {
+            fetch('http://localhost:8080', {
                 method: "POST",
                 body: formData,
             });
