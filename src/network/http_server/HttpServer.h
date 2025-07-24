@@ -16,7 +16,7 @@
 // Forward declaration for connection state
 struct http_connection_state;
 
-enum RequestType
+enum RequestType : uint8_t
 {
     StatusRequest,
     ConfigRequest,
