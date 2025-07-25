@@ -36,7 +36,7 @@ std::vector<std::string> split_by_lines(const std::string& text) {
     return lines;
 }
 
-static int parse_request_package(pbuf* package, HTTPMessage& message)
+static int parse_request_package(const pbuf* package, HTTPMessage& message)
 {
     char request_buffer[CONFIG::MAX_REQUEST_SIZE];
     
@@ -44,9 +44,9 @@ static int parse_request_package(pbuf* package, HTTPMessage& message)
                                        package->tot_len, 0);
     
     request_buffer[copied] = '\0';
-    std::string content(request_buffer);
+    const std::string content(request_buffer);
 
-    auto lines = split_by_lines(content);
+    const auto lines = split_by_lines(content);
 
     int start_index = 0;
     bool found_body = !message.body.empty();

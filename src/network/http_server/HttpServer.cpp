@@ -30,8 +30,11 @@ struct http_connection_state
 
     size_t bytes_received;
     bool response_ready;
+    HTTPMessage *request;
+    bool request_ready;
 
-    http_connection_state() : bytes_sent(0), bytes_queued(0), response_ready(false)
+    http_connection_state() : bytes_sent(0), bytes_queued(0), bytes_received(0), response_ready(false),
+                              request(nullptr), request_ready(false)
     {
     }
 };
@@ -96,13 +99,19 @@ public:
 
         HTTP_SERVER_PRINT("HTTP: Request start parsing");
 
-        auto const request = parse_request_package(package);
+        if (conn_state->request == nullptr)
+        {
+            HTTP_SERVER_PRINT("HTTP: New message");
+            conn_state->request = new HTTPMessage();
+        }
 
-        HTTP_SERVER_PRINT("HTTP: Request received (%.100s...)\n", request.c_str());
+        parse_request_package(package, *conn_state->request);
+
+        HTTP_SERVER_PRINT("HTTP: Request received (%.100s...)\n", conn_state->request->body.c_str());
 
         // Build response (same logic as before)
         std::string response;
-        const auto type = determine_request_type(request);
+        const auto type = determine_request_type(conn_state->request->start_line);
 
         printf("Type: %d", type);
 
@@ -117,11 +126,11 @@ public:
             HTTP_SERVER_PRINT("HTTP: Serving config page, length: %d\n", response.length());
             break;
         case ConnectionResponse:
-            response = connection_request_handler(request);
+            response = connection_request_handler();
             HTTP_SERVER_PRINT("HTTP: Handling connection response\n");
             break;
         case ConnectivityCheck:
-            response = build_connectivity_check_response(request);
+            response = build_connectivity_check_response(conn_state->request->start_line);
             HTTP_SERVER_PRINT("HTTP: Connectivity check response\n");
             break;
         case Unknown:
@@ -322,10 +331,8 @@ public:
         return build_captive_portal_response();
     }
 
-    static std::string connection_request_handler(const std::string& request)
+    static std::string connection_request_handler()
     {
-        printf("Connection request: %s", request.c_str());
-
         return "HTTP/1.1 302 Found\r\n"
             "Location: http://7.7.7.7/config\r\n"
             "Content-Length: 0\r\n"
