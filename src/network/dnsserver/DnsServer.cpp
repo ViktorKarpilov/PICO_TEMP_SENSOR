@@ -33,7 +33,7 @@ typedef struct
 
 DnsServer::DnsServer()
 {
-    control_block = udp_new();
+    control_block = sensor_udp_new();
 }
 
 
@@ -114,10 +114,10 @@ int parse_domain_name(const uint8_t* data, const int max_len, uint16_t* type, ui
 }
 
 // Function to create IPv4 (A record) response
-pbuf* create_dns_response_ipv4(const uint8_t* original_query, const int query_len, const ip4_addr_t* ip_address)
+sensor_pbuf* create_dns_response_ipv4(const uint8_t* original_query, const int query_len, const sensor_ip4_addr_t* ip_address)
 {
     const uint response_size = query_len + sizeof(dns_answer_t);
-    pbuf* response = pbuf_alloc(PBUF_TRANSPORT, response_size, PBUF_RAM);
+    sensor_pbuf* response = sensor_pbuf_alloc(SENSOR_PBUF_TRANSPORT, response_size, SENSOR_PBUF_RAM);
     auto* resp_data = static_cast<uint8_t*>(response->payload);
 
     // 1. Copy original query
@@ -132,12 +132,12 @@ pbuf* create_dns_response_ipv4(const uint8_t* original_query, const int query_le
 
     // 3. Fill answer struct for A record
     dns_answer_t answer;
-    answer.name = htons(0xC00C);  // Pointer to question name
-    answer.type = htons(1);       // A record (IPv4)
-    answer.Class = htons(1);      // IN class
-    answer.ttl = htonl(300);      // 5 minutes TTL
-    answer.len = htons(4);        // 4 bytes for IPv4
-    answer.addr = htonl(ip4_addr_to_uint32(ip_address));
+    answer.name = sensor_htons(0xC00C);  // Pointer to question name
+    answer.type = sensor_htons(1);       // A record (IPv4)
+    answer.Class = sensor_htons(1);      // IN class
+    answer.ttl = sensor_htonl(300);      // 5 minutes TTL
+    answer.len = sensor_htons(4);        // 4 bytes for IPv4
+    answer.addr = sensor_htonl(sensor_ip4_addr_to_uint32(ip_address));
 
     // 4. Append answer (exactly at query_len, no extra bytes!)
     memcpy(resp_data + query_len, &answer, sizeof(answer));
@@ -146,10 +146,10 @@ pbuf* create_dns_response_ipv4(const uint8_t* original_query, const int query_le
 }
 
 // Function to create NXDOMAIN (rejection) response
-pbuf* create_dns_response_nxdomain(const uint8_t* original_query, const int query_len)
+sensor_pbuf* create_dns_response_nxdomain(const uint8_t* original_query, const int query_len)
 {
     // Response is same size as query (no answer section)
-    pbuf* response = pbuf_alloc(PBUF_TRANSPORT, query_len, PBUF_RAM);
+    sensor_pbuf* response = sensor_pbuf_alloc(SENSOR_PBUF_TRANSPORT, query_len, SENSOR_PBUF_RAM);
     auto* resp_data = static_cast<uint8_t*>(response->payload);
 
     // Copy original query
@@ -183,8 +183,8 @@ void print_pbuf_bytes(struct pbuf* p) {
 }
 
 // Updated main UDP callback with proper type handling
-udp_recv_fn DnsServer::udp_process_request_function = [](void* arg, struct udp_pcb* control_block, struct pbuf* package,
-                                                         const ip_addr_t* sender_ip, const u16_t client_port) -> void
+sensor_udp_recv_fn DnsServer::udp_process_request_function = [](void* arg, struct udp_pcb* control_block, struct pbuf* package,
+                                                         const sensor_ip_addr_t* sender_ip, const sensor_u16_t client_port) -> void
 {
     [[maybe_unused]] auto context = static_cast<DnsServer*>(arg);
 
@@ -200,7 +200,7 @@ udp_recv_fn DnsServer::udp_process_request_function = [](void* arg, struct udp_p
 #if DNS_DEBUG
         printf("Ignoring response packet\n");
 #endif
-        pbuf_free(package);
+        sensor_pbuf_free(package);
         return;
     }
 
@@ -210,7 +210,7 @@ udp_recv_fn DnsServer::udp_process_request_function = [](void* arg, struct udp_p
     pbuf* response;
 
     if (query.type == 1) {  // A record (IPv4) - WE CAN HANDLE THIS
-        ip4_addr_t result_address = CONFIG::AP_IP;
+        sensor_ip4_addr_t result_address = CONFIG::AP_IP;
         
         // Check if we have specific mapping
         const auto pair = ip4_addresses.find(query.name);
@@ -236,16 +236,16 @@ udp_recv_fn DnsServer::udp_process_request_function = [](void* arg, struct udp_p
         response = create_dns_response_nxdomain(package_data, package_len);
     }
 
-    udp_sendto(control_block, response, sender_ip, client_port);
-    pbuf_free(response);
-    pbuf_free(package);
+    sensor_udp_sendto(control_block, response, sender_ip, client_port);
+    sensor_pbuf_free(response);
+    sensor_pbuf_free(package);
 };
 
-pbuf* create_dns_response(const uint8_t* original_query, const int query_len, const ip4_addr_t* ip_address)
+pbuf* create_dns_response(const uint8_t* original_query, const int query_len, const sensor_ip4_addr_t* ip_address)
 {
     const uint response_size = query_len + sizeof(dns_answer_t);
 
-    pbuf* response = pbuf_alloc(PBUF_TRANSPORT, response_size, PBUF_RAM);
+    pbuf* response = sensor_pbuf_alloc(SENSOR_PBUF_TRANSPORT, response_size, SENSOR_PBUF_RAM);
     auto* resp_data = static_cast<uint8_t*>(response->payload);
 
     // 1. Copy original query
@@ -258,13 +258,13 @@ pbuf* create_dns_response(const uint8_t* original_query, const int query_len, co
 
     // 3. Fill answer struct
     dns_answer_t answer;
-    answer.name = htons(0xC00C);
-    answer.type = htons(1);
-    answer.Class = htons(1);
-    answer.ttl = htonl(300);
-    answer.len = htons(4);
+    answer.name = sensor_htons(0xC00C);
+    answer.type = sensor_htons(1);
+    answer.Class = sensor_htons(1);
+    answer.ttl = sensor_htonl(300);
+    answer.len = sensor_htons(4);
 
-    answer.addr = htonl(ip4_addr_to_uint32(ip_address));
+    answer.addr = sensor_htonl(sensor_ip4_addr_to_uint32(ip_address));
 
     // 4. Append answer
     memcpy(resp_data + query_len, &answer, sizeof(answer));
@@ -281,7 +281,7 @@ void DnsServer::deinit()
 {
     if (this->control_block != nullptr)
     {
-        udp_disconnect(this->control_block);
+        sensor_udp_disconnect(this->control_block);
         this->control_block = nullptr;
 #if DNS_DEBUG        
         printf("DNS: Server deinitialized\n");
@@ -289,21 +289,21 @@ void DnsServer::deinit()
     }
 }
 
-static int bind_callback(udp_pcb** udp, void* cb_data, const udp_recv_fn cb_udp_recv)
+static int bind_callback(udp_pcb** udp, void* cb_data, const sensor_udp_recv_fn cb_udp_recv)
 {
-    *udp = udp_new();
+    *udp = sensor_udp_new();
     if (*udp == nullptr)
     {
         return -ENOMEM;
     }
-    udp_recv(*udp, cb_udp_recv, cb_data);
-    return ERR_OK;
+    sensor_udp_recv(*udp, cb_udp_recv, cb_data);
+    return SENSOR_ERR_OK;
 }
 
 static int ip_port_dns_bind(udp_pcb** udp)
 {
-    const err_t err = udp_bind(*udp, &CONFIG::DNS_ADDRESS, CONFIG::DNS_PORT);
-    if (err != ERR_OK)
+    const sensor_err_t err = sensor_udp_bind(*udp, &CONFIG::DNS_ADDRESS, CONFIG::DNS_PORT);
+    if (err != SENSOR_ERR_OK)
     {
 #if DNS_DEBUG
         printf("dns failed to bind to port %u: %d", CONFIG::DNS_PORT, err);
@@ -315,14 +315,14 @@ static int ip_port_dns_bind(udp_pcb** udp)
 
 int DnsServer::init()
 {
-    if (bind_callback(&this->control_block, this, *udp_process_request_function) != ERR_OK)
+    if (bind_callback(&this->control_block, this, *udp_process_request_function) != SENSOR_ERR_OK)
     {
 #if DNS_DEBUG
         printf("dns server failed to start\n");
 #endif
         return 1;
     }
-    if (ip_port_dns_bind(&this->control_block) != ERR_OK)
+    if (ip_port_dns_bind(&this->control_block) != SENSOR_ERR_OK)
     {
 #if DNS_DEBUG
         printf("dns server failed to bind\n");

@@ -5,12 +5,12 @@
 #ifndef HTTPSERVER_H
 #define HTTPSERVER_H
 
-#include <lwip/tcp.h>
 #include <string>
+#include <hardware/network/network.h>
 #include <src/network/wifi_service/WifiService.h>
 
 #define LWIP_DEBUG 1
-#define TCP_DEBUG LWIP_DBG_ON
+// #define TCP_DEBUG LWIP_DBG_ON
 #define HTTPD_DEBUG LWIP_DBG_ON
 
 // Forward declaration for connection state
@@ -39,7 +39,7 @@ public:
     static bool test_can_bind();
     
 private:
-    tcp_pcb* server_pcb;
+    tcp_pcb_control_block* server_pcb;
     WifiService *wifi_service;
 
     class HttpServerCommunication;

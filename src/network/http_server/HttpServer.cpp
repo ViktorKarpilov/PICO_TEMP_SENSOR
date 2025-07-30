@@ -6,13 +6,12 @@
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
-#include "lwip/tcp.h"
-#include "lwip/pbuf.h"
 #include <src/config.h>
 #include <src/enviroment_sensor/enviroment_sensor.h>
 #include "Helpers/HTTPHelper.cpp"
 
 #include "generated/config_html.h"
+#include "hardware/network/network.h"
 #define HTTP_SERVER_DEBUG 0
 
 #ifdef HTTP_SERVER_DEBUG
@@ -51,7 +50,7 @@ HttpServer::~HttpServer()
 class HttpServer::HttpServerCommunication
 {
 public:
-    static err_t accept_callback(void* arg, tcp_pcb* newpcb, err_t err)
+    static err_t accept_callback(void* arg, tcp_pcb_control_block* newpcb, err_t err)
     {
         if (err != ERR_OK || newpcb == nullptr)
         {
@@ -75,7 +74,7 @@ public:
         return ERR_OK;
     }
 
-    static err_t recv_callback(void* arg, tcp_pcb* tpcb, pbuf* package, err_t err)
+    static err_t recv_callback(void* arg, tcp_pcb_control_block* tpcb, pbuf* package, err_t err)
     {
         auto* conn_state = static_cast<http_connection_state*>(arg);
 
@@ -113,7 +112,7 @@ public:
         std::string response;
         const auto type = determine_request_type(conn_state->request->start_line);
 
-        printf("Type: %d", type);
+        printf("HTTP: Type: %d\n", type);
 
         switch (type)
         {
@@ -162,7 +161,7 @@ public:
         return ERR_OK;
     }
 
-    static err_t sent_callback(void* arg, tcp_pcb* tpcb, u16_t len)
+    static err_t sent_callback(void* arg, tcp_pcb_control_block* tpcb, u16_t len)
     {
         auto* conn_state = static_cast<http_connection_state*>(arg);
 
@@ -187,7 +186,7 @@ public:
         return ERR_OK;
     }
 
-    static err_t poll_callback(void* arg, tcp_pcb* tpcb)
+    static err_t poll_callback(void* arg, tcp_pcb_control_block* tpcb)
     {
         // Connection timeout - clean up
         HTTP_SERVER_PRINT("HTTP: Connection timeout, cleaning up\n");
@@ -204,7 +203,7 @@ public:
         delete conn_state;
     }
 
-    static err_t send_response_data(tcp_pcb* tpcb, http_connection_state* conn_state)
+    static err_t send_response_data(tcp_pcb_control_block* tpcb, http_connection_state* conn_state)
     {
         if (!conn_state->response_ready || conn_state->bytes_queued >= conn_state->response_data.length())
         {
@@ -246,7 +245,7 @@ public:
         return err;
     }
 
-    static void cleanup_connection(tcp_pcb* tpcb, http_connection_state* conn_state)
+    static void cleanup_connection(tcp_pcb_control_block* tpcb, http_connection_state* conn_state)
     {
         delete conn_state;
 
@@ -435,7 +434,7 @@ bool HttpServer::test_can_bind()
 {
     HTTP_SERVER_PRINT("Testing if we can bind to port 80...\n");
 
-    tcp_pcb* test_pcb = tcp_new();
+    tcp_pcb_control_block* test_pcb = tcp_new();
     if (!test_pcb)
     {
         HTTP_SERVER_PRINT("❌ Cannot create TCP PCB\n");

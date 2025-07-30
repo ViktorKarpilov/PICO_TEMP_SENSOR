@@ -2,7 +2,6 @@
 // Created by PC on 7/24/2025.
 //
 
-#include <lwip/pbuf.h>
 #include <src/config.h>
 #include <vector>
 
@@ -19,7 +18,7 @@ struct HTTPMessage
     std::string body;
 };
 
-std::vector<std::string> split_by_lines(const std::string& text) {
+inline std::vector<std::string> split_by_lines(const std::string& text) {
     std::vector<std::string> lines;
     size_t start = 0;
     size_t pos = 0;

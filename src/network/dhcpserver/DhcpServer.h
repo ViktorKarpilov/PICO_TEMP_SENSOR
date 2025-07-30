@@ -6,10 +6,7 @@
 
 #include <array>
 #include <cstdint>
-#include <lwip/udp.h>
 #include <src/config.h>
-
-#include "lwip/ip_addr.h"
 
 // DHCP Message Types
 enum class DhcpMessageType : std::uint8_t {
@@ -73,32 +70,32 @@ public:
     explicit DhcpServer();
     ~DhcpServer();
     
-    int init(const ip4_addr_t& server_ip, const ip4_addr_t& netmask, std::uint8_t base_ip = 8);
+    int init(const sensor_ip4_addr_t& server_ip, const sensor_ip4_addr_t& netmask, std::uint8_t base_ip = 8);
     void deinit();
     
 private:
-    udp_pcb* control_block;
-    ip4_addr_t server_ip;
-    ip4_addr_t netmask;
+    udp_pcb_control_block* control_block;
+    sensor_ip4_addr_t server_ip;
+    sensor_ip4_addr_t netmask;
     std::uint8_t base_ip_offset;
     std::array<dhcp_lease_t, CONFIG::MAX_DHCP_CLIENTS> leases;
     
-    static udp_recv_fn udp_process_request_function;
+    static sensor_udp_recv_fn udp_process_request_function;
     
     // Helper functions
-    std::uint8_t* find_dhcp_option(std::uint8_t* options, DhcpOption option_type);
-    void write_dhcp_option_u8(std::uint8_t** opt, DhcpOption option, std::uint8_t value);
-    void write_dhcp_option_u32(std::uint8_t** opt, DhcpOption option, std::uint32_t value);
-    void write_dhcp_option_bytes(std::uint8_t** opt, DhcpOption option, std::size_t len, const void* data);
+    static std::uint8_t* find_dhcp_option(std::uint8_t* options, DhcpOption option_type);
+    static void write_dhcp_option_u8(std::uint8_t** opt, DhcpOption option, std::uint8_t value);
+    static void write_dhcp_option_u32(std::uint8_t** opt, DhcpOption option, std::uint32_t value);
+    static void write_dhcp_option_bytes(std::uint8_t** opt, DhcpOption option, std::size_t len, const void* data);
     
     int find_available_lease(const std::uint8_t* client_mac);
-    bool is_mac_equal(const std::uint8_t* mac1, const std::uint8_t* mac2);
-    bool is_mac_empty(const std::uint8_t* mac);
-    bool is_lease_expired(const dhcp_lease_t& lease);
+    static bool is_mac_equal(const std::uint8_t* mac1, const std::uint8_t* mac2);
+    static bool is_mac_empty(const std::uint8_t* mac);
+    static bool is_lease_expired(const dhcp_lease_t& lease);
     
-    pbuf* create_dhcp_response(const dhcp_message_t& request, DhcpMessageType response_type, std::uint8_t client_ip_offset);
-    void process_dhcp_discover(const dhcp_message_t& request, const ip_addr_t* client_addr, std::uint16_t client_port);
-    void process_dhcp_request(const dhcp_message_t& request, const ip_addr_t* client_addr, std::uint16_t client_port);
+    sensor_pbuf* create_dhcp_response(const dhcp_message_t& request, DhcpMessageType response_type, std::uint8_t client_ip_offset);
+    void process_dhcp_discover(const dhcp_message_t& request, const sensor_ip_addr_t* client_addr, std::uint16_t client_port);
+    void process_dhcp_request(const dhcp_message_t& request, const sensor_ip_addr_t* client_addr, std::uint16_t client_port);
 };
 
 #endif //DHCPSERVER_H

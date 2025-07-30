@@ -1,10 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
-#include <cstdint>
-#include <lwip/ip4_addr.h>
 
 #include "hardware/i2c.h"
 #include "network/dnsserver/DnsTable.h"
+#include <cstdint>
 
 namespace CONFIG
 {
@@ -33,11 +32,11 @@ namespace CONFIG
     // WiFi AP config
     constexpr const char* AP_NAME = "picow_test";
     constexpr const char* PASSWORD = nullptr;
-    constexpr ip4_addr_t AP_IP = make_ip4_addr(7, 7, 7, 7);
+    constexpr sensor_ip4_addr_t AP_IP = make_ip4_addr(7, 7, 7, 7);
 
     // DNS config
-    constexpr ip4_addr_t DNS_ADDRESS = AP_IP;
-    constexpr ip4_addr_t NETMASK = make_ip4_addr(255, 255, 255, 0);
+    constexpr sensor_ip4_addr_t DNS_ADDRESS = AP_IP;
+    constexpr sensor_ip4_addr_t NETMASK = make_ip4_addr(255, 255, 255, 0);
     constexpr int DNS_PORT = 53;
     #define DSN_DEBUG 0
 
@@ -49,7 +48,7 @@ namespace CONFIG
     constexpr uint MAC_ADDRESS_LEN = 6;
     constexpr uint MAX_DHCP_CLIENTS = 10;
     constexpr std::uint8_t DHCP_BASE_IP = 8;
-    #define DHCP_DEBUG 0
+    #define SENSOR_DHCP_DEBUG 0
 
     // WEB SERVER CONFIG
     constexpr int WEB_SERVER_PORT = 80;
