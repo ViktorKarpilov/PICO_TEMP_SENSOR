@@ -1,9 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "hardware/i2c.h"
 #include "network/dnsserver/DnsTable.h"
-#include <cstdint>
+#include "hardware/iic/i2c.h"
 
 namespace CONFIG
 {
@@ -18,7 +17,7 @@ namespace CONFIG
     constexpr int DIODE_SLEEP_DURATION = 1000;
 
     // pico i2c config
-    constexpr i2c_inst* I2CChip = i2c0;
+    constexpr sensor_i2c_inst_t* I2CChip = SENSOR_I2C0;
     constexpr int SDA_PIN = 20;
     constexpr int SCL_PIN = 21;
 

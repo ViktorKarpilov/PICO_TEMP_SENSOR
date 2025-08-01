@@ -93,7 +93,7 @@ int parse_domain_name(const uint8_t* data, const int max_len, uint16_t* type, ui
         if (len >= 0xC0)
         {
 #if DNS_DEBUG
-            printf("DNS compression not supported\n");
+            log("DNS compression not supported\n");
 #endif
             return -1;
         }
@@ -171,14 +171,14 @@ void print_pbuf_bytes(struct pbuf* p) {
         uint8_t* payload = (uint8_t*)current->payload;
         
         for (int i = 0; i < current->len; i++) {
-            printf("%02X ", payload[i]);
+            log("%02X ", payload[i]);
         }
 #endif
         
         current = current->next;
     }
 #if DNS_DEBUG    
-    printf("\n");
+    log("\n");
 #endif
 }
 
@@ -189,7 +189,7 @@ sensor_udp_recv_fn DnsServer::udp_process_request_function = [](void* arg, struc
     [[maybe_unused]] auto context = static_cast<DnsServer*>(arg);
 
 #if DNS_DEBUG
-    printf("🔍 DNS: Request from %s:%d\n", ip4addr_ntoa(ip_2_ip4(sender_ip)), client_port);
+    log("🔍 DNS: Request from %s:%d\n", ip4addr_ntoa(ip_2_ip4(sender_ip)), client_port);
 #endif
 
     const auto package_data = static_cast<uint8_t*>(package->payload);
@@ -198,7 +198,7 @@ sensor_udp_recv_fn DnsServer::udp_process_request_function = [](void* arg, struc
 
     if (package_header.flags & 0x8000) {
 #if DNS_DEBUG
-        printf("Ignoring response packet\n");
+        log("Ignoring response packet\n");
 #endif
         sensor_pbuf_free(package);
         return;
@@ -220,18 +220,18 @@ sensor_udp_recv_fn DnsServer::udp_process_request_function = [](void* arg, struc
         
         response = create_dns_response_ipv4(package_data, package_len, &result_address);
 #if DNS_DEBUG        
-        printf("DNS Response: %s -> %s\n", query.name, ip4addr_ntoa(&result_address));
+        log("DNS Response: %s -> %s\n", query.name, ip4addr_ntoa(&result_address));
 #endif
         
     } else if (query.type == 28) {  // AAAA record (IPv6) - REJECT
 #if DNS_DEBUG
-        printf("❌ Rejecting IPv6 query (we don't support IPv6)\n");
+        log("❌ Rejecting IPv6 query (we don't support IPv6)\n");
 #endif
         response = create_dns_response_nxdomain(package_data, package_len);
         
     } else {  // Other types - REJECT
 #if DNS_DEBUG
-        printf("❌ Rejecting unsupported query type %d\n", query.type);
+        log("❌ Rejecting unsupported query type %d\n", query.type);
 #endif
         response = create_dns_response_nxdomain(package_data, package_len);
     }
@@ -284,7 +284,7 @@ void DnsServer::deinit()
         sensor_udp_disconnect(this->control_block);
         this->control_block = nullptr;
 #if DNS_DEBUG        
-        printf("DNS: Server deinitialized\n");
+        log("DNS: Server deinitialized\n");
 #endif
     }
 }
@@ -306,7 +306,7 @@ static int ip_port_dns_bind(udp_pcb** udp)
     if (err != SENSOR_ERR_OK)
     {
 #if DNS_DEBUG
-        printf("dns failed to bind to port %u: %d", CONFIG::DNS_PORT, err);
+        log("dns failed to bind to port %u: %d", CONFIG::DNS_PORT, err);
 #endif
         return 1;
     }
@@ -318,20 +318,20 @@ int DnsServer::init()
     if (bind_callback(&this->control_block, this, *udp_process_request_function) != SENSOR_ERR_OK)
     {
 #if DNS_DEBUG
-        printf("dns server failed to start\n");
+        log("dns server failed to start\n");
 #endif
         return 1;
     }
     if (ip_port_dns_bind(&this->control_block) != SENSOR_ERR_OK)
     {
 #if DNS_DEBUG
-        printf("dns server failed to bind\n");
+        log("dns server failed to bind\n");
 #endif
         return 1;
     }
 
 #if DNS_DEBUG
-    printf("DNS server listening on port %d\n", CONFIG::DNS_PORT);
+    log("DNS server listening on port %d\n", CONFIG::DNS_PORT);
 #endif
     return 0;
 }

@@ -13,20 +13,17 @@ if(NOT BUILD_TESTING)
 endif ()
 
 # pico_sdk_import.cmake is a single file copied from this SDK
-# note: this must happen before project()
-include(pico_sdk_import.cmake)
+if (NOT BUILD_TESTING)
+    include(pico_sdk_import.cmake)
+endif ()
 
 project(TEMP_SENSOR_C)
 enable_language(C CXX ASM)
 set(CMAKE_CXX_STANDARD 20)
 
-#execute_process(
-#        COMMAND python ${CMAKE_SOURCE_DIR}/tools/html_to_cpp.py
-#        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-#)
-
 if (BUILD_TESTING)
-    include(CTest)
+    set(PROJECT_CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Project config directory")
+# Just so happen currently used only for tests
     add_subdirectory(external)
     add_subdirectory(tests)
 else()
@@ -35,7 +32,10 @@ else()
 endif ()
 
 message(STATUS "EXECUTABLE ")
-add_executable(TEMP_SENSOR_C main.cpp lwipopts.h generated/config_html.h generated/status_html.h)
+add_executable(TEMP_SENSOR_C main.cpp lwipopts.h generated/config_html.h generated/status_html.h
+        hardware/stdio/stdio.h
+        hardware/iic/i2c.h
+        hardware/pico/pico.h)
 
 if (NOT BUILD_TESTING)
     message(STATUS "NOT BUILD TESTING")
@@ -74,14 +74,4 @@ if(NOT BUILD_TESTING)
             COMMAND picotool uf2 convert ${CMAKE_CURRENT_BINARY_DIR}/TEMP_SENSOR_C.elf ${CMAKE_CURRENT_BINARY_DIR}/TEMP_SENSOR_C.uf2
             COMMENT "Converting ELF to UF2 using system picotool"
             VERBATIM)
-
-else()
-    add_library(mocks
-            tests/mocks/mock_lwip.cpp
-            tests/mocks/mock_pico.cpp
-            hardware/network/tcp.cpp
-            hardware/network/tcp.h)
-
-    target_include_directories(mocks PUBLIC tests/mocks/)
-    target_link_libraries(TEMP_SENSOR_C mocks)
 endif()

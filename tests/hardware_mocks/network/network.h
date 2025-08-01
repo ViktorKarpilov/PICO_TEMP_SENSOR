@@ -2,17 +2,10 @@
 // Created by PC on 7/26/2025.
 //
 
-#ifndef TCP_H
-#define TCP_H
-#include "network.h"
-#include <lwip/udp.h>
-#include <lwip/ip_addr.h>
-#include <lwip/pbuf.h>
-#include <lwip/tcp.h>
-#include <sys/errno.h>
-#include <pico/cyw43_arch.h>
-// Note - it's used, for some reason CLion don't see it
-#include <cyw43_configport.h>
+#ifndef NETWORK_H
+#define NETWORK_H
+#include <cstdint>
+
 
 // ===== TYPE ALIASES =====
 using tcp_pcb_control_block = tcp_pcb;
@@ -60,18 +53,17 @@ constexpr auto SENSOR_IP_ANY_TYPE = IP_ANY_TYPE;
 #define sensor_IP4_ADDR(addr, a, b, c, d) IP4_ADDR(addr, a, b, c, d)
 #define sensor_cyw43_hal_ticks_ms() cyw43_hal_ticks_ms()
 #define sensor_udp_remove(udp) udp_remove(udp)
-#define sensor_cyw43_arch_poll() cyw43_arch_poll()
 
-// ===== IP ADDRESS MACROS =====
-#define sensor_ip4_addr1(ipaddr) ip4_addr1(ipaddr)
-#define sensor_ip4_addr2(ipaddr) ip4_addr2(ipaddr)
-#define sensor_ip4_addr3(ipaddr) ip4_addr3(ipaddr)
-#define sensor_ip4_addr4(ipaddr) ip4_addr4(ipaddr)
+// Mock versions of the macros
+#define sensor_ip4_addr1(ipaddr) ((uint8_t)(((ipaddr)->addr) & 0xff))
+#define sensor_ip4_addr2(ipaddr) ((uint8_t)((((ipaddr)->addr) >> 8) & 0xff))
+#define sensor_ip4_addr3(ipaddr) ((uint8_t)((((ipaddr)->addr) >> 16) & 0xff))
+#define sensor_ip4_addr4(ipaddr) ((uint8_t)((((ipaddr)->addr) >> 24) & 0xff))
 
 inline uint32_t sensor_ip4_addr_to_uint32(const sensor_ip4_addr_t* ip)
 {
-    return (ip4_addr1(ip) << 24) | (ip4_addr2(ip) << 16) |
-        (ip4_addr3(ip) << 8) | ip4_addr4(ip);
+    return (sensor_ip4_addr1(ip) << 24) | (sensor_ip4_addr2(ip) << 16) |
+        (sensor_ip4_addr3(ip) << 8) | sensor_ip4_addr4(ip);
 }
 
-#endif //TCP_H
+#endif //NETWORK_H

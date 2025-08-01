@@ -1,8 +1,6 @@
-#include <lwip/priv/tcp_priv.h>
 #include <pico/cyw43_arch.h>
 
 #include "src.h"
-#include "hardware/gpio.h"
 #include "pico/time.h"
 #include "config.h"
 #include "enviroment_sensor/enviroment_sensor.h"
@@ -39,6 +37,6 @@ void loop()
         last_display_update = current_time;
     }
     
-    cyw43_arch_poll();  // Process Wi-Fi events
+    sensor_cyw43_arch_poll();  // Process Wi-Fi events
     sleep_ms(10);
 }

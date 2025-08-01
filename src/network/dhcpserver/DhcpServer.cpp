@@ -27,7 +27,7 @@ int DhcpServer::init(const sensor_ip4_addr_t& server_ip, const sensor_ip4_addr_t
     control_block = sensor_udp_new();
     if (control_block == nullptr) {
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: Failed to create UDP PCB\n");
+        log("DHCP: Failed to create UDP PCB\n");
 #endif
         return -1;
     }
@@ -38,7 +38,7 @@ int DhcpServer::init(const sensor_ip4_addr_t& server_ip, const sensor_ip4_addr_t
     const sensor_err_t err = sensor_udp_bind(control_block, SENSOR_IP_ANY_TYPE, CONFIG::DHCP_SERVER_PORT);
     if (err != SENSOR_ERR_OK) {
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: Failed to bind to port %d: %d\n", CONFIG::DHCP_SERVER_PORT, err);
+        log("DHCP: Failed to bind to port %d: %d\n", CONFIG::DHCP_SERVER_PORT, err);
 #endif
         sensor_udp_remove(control_block);
         control_block = nullptr;
@@ -46,8 +46,8 @@ int DhcpServer::init(const sensor_ip4_addr_t& server_ip, const sensor_ip4_addr_t
     }
     
 #if SENSOR_DHCP_DEBUG
-    printf("DHCP: Server listening on port %d\n", CONFIG::DHCP_SERVER_PORT);
-    printf("DHCP: Server IP: %u.%u.%u.%u\n", 
+    log("DHCP: Server listening on port %d\n", CONFIG::DHCP_SERVER_PORT);
+    log("DHCP: Server IP: %u.%u.%u.%u\n", 
            ip4_addr1(&server_ip), ip4_addr2(&server_ip), 
            ip4_addr3(&server_ip), ip4_addr4(&server_ip));
 #endif
@@ -60,7 +60,7 @@ void DhcpServer::deinit() {
         sensor_udp_remove(control_block);
         control_block = nullptr;
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: Server deinitialized\n");
+        log("DHCP: Server deinitialized\n");
 #endif
     }
 }
@@ -74,7 +74,7 @@ sensor_udp_recv_fn DhcpServer::udp_process_request_function = [](void* arg, udp_
     
     if (packet->tot_len < DHCP_MIN_PACKET_SIZE) {
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: Packet too small (%d bytes)\n", packet->tot_len);
+        log("DHCP: Packet too small (%d bytes)\n", packet->tot_len);
 #endif
         sensor_pbuf_free(packet);
         return;
@@ -84,7 +84,7 @@ sensor_udp_recv_fn DhcpServer::udp_process_request_function = [](void* arg, udp_
     const std::size_t copied = sensor_pbuf_copy_partial(packet, &request, sizeof(request), 0);
     if (copied < DHCP_MIN_PACKET_SIZE) {
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: Failed to copy packet data\n");
+        log("DHCP: Failed to copy packet data\n");
 #endif
         sensor_pbuf_free(packet);
         return;
@@ -101,7 +101,7 @@ sensor_udp_recv_fn DhcpServer::udp_process_request_function = [](void* arg, udp_
     std::uint8_t* msg_type_opt = server->find_dhcp_option(options, DhcpOption::MSG_TYPE);
     if (msg_type_opt == nullptr) {
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: No message type option found\n");
+        log("DHCP: No message type option found\n");
 #endif
         sensor_pbuf_free(packet);
         return;
@@ -120,7 +120,7 @@ sensor_udp_recv_fn DhcpServer::udp_process_request_function = [](void* arg, udp_
             
         default:
 #if SENSOR_DHCP_DEBUG
-            printf("DHCP: Unhandled message type: %d\n", static_cast<int>(message_type));
+            log("DHCP: Unhandled message type: %d\n", static_cast<int>(message_type));
 #endif
             break;
     }
@@ -207,7 +207,7 @@ void DhcpServer::process_dhcp_discover(const dhcp_message_t& request,
     const int lease_index = find_available_lease(request.chaddr);
     if (lease_index < 0) {
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: No available IP addresses\n");
+        log("DHCP: No available IP addresses\n");
 #endif
         return;
     }
@@ -220,7 +220,7 @@ void DhcpServer::process_dhcp_discover(const dhcp_message_t& request,
         sensor_pbuf_free(response);
         
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: Sent OFFER to %02x:%02x:%02x:%02x:%02x:%02x for IP %u.%u.%u.%u\n",
+        log("DHCP: Sent OFFER to %02x:%02x:%02x:%02x:%02x:%02x for IP %u.%u.%u.%u\n",
                request.chaddr[0], request.chaddr[1], request.chaddr[2], 
                request.chaddr[3], request.chaddr[4], request.chaddr[5],
                ip4_addr1(&server_ip), ip4_addr2(&server_ip), 
@@ -237,7 +237,7 @@ void DhcpServer::process_dhcp_request(const dhcp_message_t& request,
     
     if (requested_ip_opt == nullptr) {
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: REQUEST without requested IP option\n");
+        log("DHCP: REQUEST without requested IP option\n");
 #endif
         return;
     }
@@ -245,7 +245,7 @@ void DhcpServer::process_dhcp_request(const dhcp_message_t& request,
     // Verify requested IP is in our subnet
     if (std::memcmp(requested_ip_opt + 2, &server_ip, 3) != 0) {
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: Requested IP not in our subnet\n");
+        log("DHCP: Requested IP not in our subnet\n");
 #endif
         return;
     }
@@ -255,7 +255,7 @@ void DhcpServer::process_dhcp_request(const dhcp_message_t& request,
     
     if (lease_index >= CONFIG::MAX_DHCP_CLIENTS) {
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: Invalid IP offset requested\n");
+        log("DHCP: Invalid IP offset requested\n");
 #endif
         return;
     }
@@ -265,7 +265,7 @@ void DhcpServer::process_dhcp_request(const dhcp_message_t& request,
         !is_mac_empty(leases[lease_index].mac.data()) && 
         !is_lease_expired(leases[lease_index])) {
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: IP already in use by another client\n");
+        log("DHCP: IP already in use by another client\n");
 #endif
         return;
     }
@@ -282,7 +282,7 @@ void DhcpServer::process_dhcp_request(const dhcp_message_t& request,
         sensor_pbuf_free(response);
         
 #if SENSOR_DHCP_DEBUG
-        printf("DHCP: Client connected - MAC: %02x:%02x:%02x:%02x:%02x:%02x IP: %u.%u.%u.%u\n",
+        log("DHCP: Client connected - MAC: %02x:%02x:%02x:%02x:%02x:%02x IP: %u.%u.%u.%u\n",
                request.chaddr[0], request.chaddr[1], request.chaddr[2], 
                request.chaddr[3], request.chaddr[4], request.chaddr[5],
                ip4_addr1(&server_ip), ip4_addr2(&server_ip), 

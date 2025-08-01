@@ -12,10 +12,11 @@
 
 #include "generated/config_html.h"
 #include "hardware/network/network.h"
+#include "hardware/stdio/stdio.h"
 #define HTTP_SERVER_DEBUG 0
 
 #ifdef HTTP_SERVER_DEBUG
-#define HTTP_SERVER_PRINT(fmt, ...) printf(fmt, ##__VA_ARGS__)
+#define HTTP_SERVER_PRINT(fmt, ...) log(fmt, ##__VA_ARGS__)
 #else
     #define HTTP_SERVER_PRINT(fmt, ...) ((void)0)
 #endif
@@ -112,7 +113,7 @@ public:
         std::string response;
         const auto type = determine_request_type(conn_state->request->start_line);
 
-        printf("HTTP: Type: %d\n", type);
+        log("HTTP: Type: %d\n", type);
 
         switch (type)
         {

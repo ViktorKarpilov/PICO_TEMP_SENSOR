@@ -146,7 +146,7 @@ Info:
 //     // gpio_pull_up(LCD_SDA_PIN);
 //     // gpio_pull_up(LCD_SCL_PIN);
 //     
-//     printf("DEV_Module_Init OK \r\n");
+//     log("DEV_Module_Init OK \r\n");
 //     return 0;
 // }
 
@@ -155,31 +155,31 @@ UBYTE DEV_Module_Init(void)
     stdio_init_all();   
     
     // SPI Config with diagnostics
-    printf("Initializing SPI1 at 10MHz...\r\n");
+    log("Initializing SPI1 at 10MHz...\r\n");
     uint actual_baudrate = spi_init(SPI_PORT, 10000 * 1000);
-    printf("SPI actual baudrate: %d Hz\r\n", actual_baudrate);
+    log("SPI actual baudrate: %d Hz\r\n", actual_baudrate);
     
-    printf("Setting GPIO functions...\r\n");
+    log("Setting GPIO functions...\r\n");
     gpio_set_function(LCD_CLK_PIN, GPIO_FUNC_SPI);   // GP10
     gpio_set_function(LCD_MOSI_PIN, GPIO_FUNC_SPI);  // GP11
-    printf("SPI pins configured\r\n");
+    log("SPI pins configured\r\n");
     
     // Test SPI by sending a dummy byte
-    printf("Testing SPI communication...\r\n");
+    log("Testing SPI communication...\r\n");
     uint8_t test_byte = 0xAA;
     spi_write_blocking(SPI_PORT, &test_byte, 1);
-    printf("SPI test write completed\r\n");
+    log("SPI test write completed\r\n");
     
     // GPIO Config
     DEV_GPIO_Init();
     
-    printf("DEV_Module_Init COMPLETED\r\n");
+    log("DEV_Module_Init COMPLETED\r\n");
     return 0;
 }
 
 void DEV_SET_PWM(uint8_t Value){
     if(Value<0 || Value >100){
-        printf("DEV_SET_PWM Error \r\n");
+        log("DEV_SET_PWM Error \r\n");
     }else {
         pwm_set_chan_level(slice_num, PWM_CHAN_B, Value);
     }

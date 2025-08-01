@@ -10,6 +10,7 @@
 #include "ImageData.h"
 #include "Config/DEV_Config.h"
 #include "GUI/GUI_Paint.h"
+#include "hardware/stdio/stdio.h"
 #include "OLED/OLED_1in3_c.h"
 
 UBYTE* BlackImage = nullptr;
@@ -27,7 +28,7 @@ int OLED_Init()
 {
     if(DEV_Module_Init()!=0){
         while(true){
-            printf("END\r\n");
+            log("END\r\n");
         }
     }
     
@@ -39,13 +40,13 @@ int OLED_Init()
         OLED_1in3_C_HEIGHT; (BlackImage = static_cast<uint8_t*>(malloc(Imagesize))) == nullptr)
     {
         while(true){
-            printf("Failed to apply for black memory...\r\n");
+            log("Failed to apply for black memory...\r\n");
         }
     }
     Paint_NewImage(BlackImage, OLED_1in3_C_WIDTH, OLED_1in3_C_HEIGHT, 0, WHITE);	
     
     // Drawing on the image
-    printf("Drawing:page 2\r\n");
+    log("Drawing:page 2\r\n");
     Paint_DrawString_EN(10, 0, "Pico-OLED", &Font16, WHITE, BLACK);
     Paint_DrawString_EN(10, 17, "hello world", &Font8, WHITE, BLACK);
     Paint_DrawNum(10, 30, 123.1, &Font8,2, WHITE, BLACK);
