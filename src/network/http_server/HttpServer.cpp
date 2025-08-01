@@ -6,21 +6,20 @@
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
-#include "lwip/tcp.h"
-#include "lwip/pbuf.h"
 #include <src/config.h>
 #include <src/enviroment_sensor/enviroment_sensor.h>
+#include "Helpers/HTTPHelper.cpp"
 
 #include "generated/config_html.h"
+#include "hardware/network/network.h"
+#include "hardware/stdio/stdio.h"
 #define HTTP_SERVER_DEBUG 0
 
 #ifdef HTTP_SERVER_DEBUG
-#define HTTP_SERVER_PRINT(fmt, ...) printf(fmt, ##__VA_ARGS__)
+#define HTTP_SERVER_PRINT(fmt, ...) log(fmt, ##__VA_ARGS__)
 #else
     #define HTTP_SERVER_PRINT(fmt, ...) ((void)0)
 #endif
-
-constexpr size_t MAX_REQUEST_SIZE = 8192;
 
 // Connection state structure for each client
 struct http_connection_state
@@ -28,9 +27,14 @@ struct http_connection_state
     std::string response_data;
     size_t bytes_sent;
     size_t bytes_queued;
-    bool response_ready;
 
-    http_connection_state() : bytes_sent(0), response_ready(false), bytes_queued(0)
+    size_t bytes_received;
+    bool response_ready;
+    HTTPMessage *request;
+    bool request_ready;
+
+    http_connection_state() : bytes_sent(0), bytes_queued(0), bytes_received(0), response_ready(false),
+                              request(nullptr), request_ready(false)
     {
     }
 };
@@ -46,8 +50,8 @@ HttpServer::~HttpServer()
 
 class HttpServer::HttpServerCommunication
 {
-    public:
-    static err_t accept_callback(void* arg, tcp_pcb* newpcb, err_t err)
+public:
+    static err_t accept_callback(void* arg, tcp_pcb_control_block* newpcb, err_t err)
     {
         if (err != ERR_OK || newpcb == nullptr)
         {
@@ -71,7 +75,7 @@ class HttpServer::HttpServerCommunication
         return ERR_OK;
     }
 
-    static err_t recv_callback(void* arg, tcp_pcb* tpcb, pbuf* p, err_t err)
+    static err_t recv_callback(void* arg, tcp_pcb_control_block* tpcb, pbuf* package, err_t err)
     {
         auto* conn_state = static_cast<http_connection_state*>(arg);
 
@@ -82,25 +86,34 @@ class HttpServer::HttpServerCommunication
             return ERR_ABRT;
         }
 
-        if (p == nullptr)
+        if (package == nullptr)
         {
             HTTP_SERVER_PRINT("HTTP: Client closed connection\n");
             cleanup_connection(tpcb, conn_state);
             return ERR_OK;
         }
 
-        // Copy the HTTP request (same as before)
-        char request_buffer[MAX_REQUEST_SIZE];
-        size_t request_len = pbuf_copy_partial(p, request_buffer,
-                                               std::min(static_cast<size_t>(p->tot_len), MAX_REQUEST_SIZE - 1), 0);
-        request_buffer[request_len] = '\0';
-        std::string request(request_buffer);
+        if (package->tot_len > CONFIG::MAX_REQUEST_SIZE - 1) {
+            return ERR_VAL;
+        }
 
-        HTTP_SERVER_PRINT("HTTP: Request received (%.100s...)\n", request.c_str());
+        HTTP_SERVER_PRINT("HTTP: Request start parsing");
+
+        if (conn_state->request == nullptr)
+        {
+            HTTP_SERVER_PRINT("HTTP: New message");
+            conn_state->request = new HTTPMessage();
+        }
+
+        parse_request_package(package, *conn_state->request);
+
+        HTTP_SERVER_PRINT("HTTP: Request received (%.100s...)\n", conn_state->request->body.c_str());
 
         // Build response (same logic as before)
         std::string response;
-        const auto type = determine_request_type(request);
+        const auto type = determine_request_type(conn_state->request->start_line);
+
+        log("HTTP: Type: %d\n", type);
 
         switch (type)
         {
@@ -113,10 +126,11 @@ class HttpServer::HttpServerCommunication
             HTTP_SERVER_PRINT("HTTP: Serving config page, length: %d\n", response.length());
             break;
         case ConnectionResponse:
-            // TODO
+            response = connection_request_handler();
+            HTTP_SERVER_PRINT("HTTP: Handling connection response\n");
             break;
         case ConnectivityCheck:
-            response = build_connectivity_check_response(request);
+            response = build_connectivity_check_response(conn_state->request->start_line);
             HTTP_SERVER_PRINT("HTTP: Connectivity check response\n");
             break;
         case Unknown:
@@ -132,8 +146,8 @@ class HttpServer::HttpServerCommunication
         conn_state->bytes_queued = 0;
 
         // Tell lwIP we've processed the received data
-        tcp_recved(tpcb, p->tot_len);
-        pbuf_free(p);
+        tcp_recved(tpcb, package->tot_len);
+        pbuf_free(package);
 
         // Try to send the response immediately
         err_t write_err = send_response_data(tpcb, conn_state);
@@ -148,14 +162,11 @@ class HttpServer::HttpServerCommunication
         return ERR_OK;
     }
 
-    static err_t sent_callback(void* arg, tcp_pcb* tpcb, u16_t len)
+    static err_t sent_callback(void* arg, tcp_pcb_control_block* tpcb, u16_t len)
     {
         auto* conn_state = static_cast<http_connection_state*>(arg);
 
         conn_state->bytes_sent += len;
-
-        HTTP_SERVER_PRINT("HTTP: TCP confirmed sent %d bytes, total confirmed: %zu/%zu (queued: %zu)\n",
-                          len, conn_state->bytes_sent, conn_state->response_data.length(), conn_state->bytes_queued);
 
         if (conn_state->bytes_sent >= conn_state->bytes_queued &&
             conn_state->bytes_queued >= conn_state->response_data.length())
@@ -176,7 +187,7 @@ class HttpServer::HttpServerCommunication
         return ERR_OK;
     }
 
-    static err_t poll_callback(void* arg, tcp_pcb* tpcb)
+    static err_t poll_callback(void* arg, tcp_pcb_control_block* tpcb)
     {
         // Connection timeout - clean up
         HTTP_SERVER_PRINT("HTTP: Connection timeout, cleaning up\n");
@@ -193,7 +204,7 @@ class HttpServer::HttpServerCommunication
         delete conn_state;
     }
 
-    static err_t send_response_data(tcp_pcb* tpcb, http_connection_state* conn_state)
+    static err_t send_response_data(tcp_pcb_control_block* tpcb, http_connection_state* conn_state)
     {
         if (!conn_state->response_ready || conn_state->bytes_queued >= conn_state->response_data.length())
         {
@@ -213,8 +224,6 @@ class HttpServer::HttpServerCommunication
 
         const char* data_ptr = conn_state->response_data.c_str() + conn_state->bytes_queued;
 
-        HTTP_SERVER_PRINT("HTTP: Queueing %zu bytes (offset: %zu)\n", to_send, conn_state->bytes_queued);
-
         // Send the data
         err_t err = tcp_write(tpcb, data_ptr, to_send, TCP_WRITE_FLAG_COPY);
 
@@ -228,9 +237,6 @@ class HttpServer::HttpServerCommunication
                 HTTP_SERVER_PRINT("❌ TCP output failed: %d\n", output_err);
                 return output_err;
             }
-
-            HTTP_SERVER_PRINT("HTTP: Successfully queued %zu bytes, total queued: %zu/%zu\n",
-                              to_send, conn_state->bytes_queued, conn_state->response_data.length());
         }
         else
         {
@@ -240,7 +246,7 @@ class HttpServer::HttpServerCommunication
         return err;
     }
 
-    static void cleanup_connection(tcp_pcb* tpcb, http_connection_state* conn_state)
+    static void cleanup_connection(tcp_pcb_control_block* tpcb, http_connection_state* conn_state)
     {
         delete conn_state;
 
@@ -306,7 +312,7 @@ class HttpServer::HttpServerCommunication
 
     inline static std::pair<RequestChecker, RequestType> request_types_reference_table[] = {
         {is_connectivity_check, ConnectivityCheck},
-        {is_config_request, ConfigRequest}, 
+        {is_config_request, ConfigRequest},
         {is_api_request, StatusRequest},
         {is_connection_response, ConnectionResponse}
     };
@@ -323,6 +329,15 @@ class HttpServer::HttpServerCommunication
         }
 
         return build_captive_portal_response();
+    }
+
+    static std::string connection_request_handler()
+    {
+        return "HTTP/1.1 302 Found\r\n"
+            "Location: http://7.7.7.7/config\r\n"
+            "Content-Length: 0\r\n"
+            "Connection: close\r\n"
+            "\r\n";
     }
 
     static std::string build_captive_portal_response()
@@ -420,7 +435,7 @@ bool HttpServer::test_can_bind()
 {
     HTTP_SERVER_PRINT("Testing if we can bind to port 80...\n");
 
-    tcp_pcb* test_pcb = tcp_new();
+    tcp_pcb_control_block* test_pcb = tcp_new();
     if (!test_pcb)
     {
         HTTP_SERVER_PRINT("❌ Cannot create TCP PCB\n");

@@ -143,7 +143,7 @@ double compensate_P(int32_t adc_P)
 	v1 = (digP[8] * (((pressure / 8.0) * (pressure / 8.0)) / 8192.0)) / 4096;
 	v2 = ((pressure / 4.0) * digP[7]) / 8192.0;
 	pressure = pressure + ((v1 + v2 + digP[6]) / 16.0) ; 
-	//printf("%7.2f \n",pressure);
+	//log("%7.2f \n",pressure);
 	return (pressure/100);
 }
 
@@ -184,9 +184,9 @@ void BME280_value()
 	pres_raw[1] = (data[3] << 12) | (data[4] << 4) | (data[5] >> 4);
 	pres_raw[2] = (data[6] << 8)  |  data[7];
 	
-	// printf("pressure : %7.2fhPa\n",compensate_P(pres_raw[0]));
-	// printf("temp :%7.2f C\n",compensate_T(pres_raw[1]));
-	// printf("hum :%7.2f %%\n\n",compensate_H(pres_raw[2]));
+	// log("pressure : %7.2fhPa\n",compensate_P(pres_raw[0]));
+	// log("temp :%7.2f C\n",compensate_T(pres_raw[1]));
+	// log("hum :%7.2f %%\n\n",compensate_H(pres_raw[2]));
 	pres_raw[0] = compensate_P(pres_raw[0]);
 	pres_raw[1] = compensate_T(pres_raw[1]);
 	pres_raw[2] = compensate_H(pres_raw[2]);

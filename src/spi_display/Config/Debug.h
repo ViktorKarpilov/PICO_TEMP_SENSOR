@@ -1,7 +1,7 @@
 /*****************************************************************************
 * | File      	:	Debug.h
 * | Author      :   
-* | Function    :	debug with printf
+* | Function    :	debug with log
 * | Info        :
 *   Image scanning
 *      Please use progressive scanning to generate images or fonts
@@ -38,7 +38,7 @@
 #include <stdio.h>
 
 #if DEBUG
-	#define Debug(__info,...) printf("Debug: " __info,##__VA_ARGS__)
+	#define Debug(__info,...) log("Debug: " __info,##__VA_ARGS__)
 #else
 	#define Debug(__info,...)  
 #endif

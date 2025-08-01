@@ -6,10 +6,7 @@
 #define DNSSERVER_H
 
 #define DNS_MAX_HOST_NAME_LEN 128
-
-#include <lwip/udp.h>
-
-#include "lwip/ip_addr.h"
+#include <hardware/network/network.h>
 
 
 class DnsServer {
@@ -21,8 +18,8 @@ public:
     int init();
     
 private:
-    udp_pcb *control_block;
-    static udp_recv_fn udp_process_request_function;
+    udp_pcb_control_block *control_block;
+    static sensor_udp_recv_fn udp_process_request_function;
 };
 
 

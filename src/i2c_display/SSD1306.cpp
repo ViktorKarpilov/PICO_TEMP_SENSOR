@@ -2,6 +2,8 @@
 #include <cstdio>
 #include <hardware/i2c.h>
 
+#include "hardware/stdio/stdio.h"
+
 const uint8_t initiated_simple[] = {
     // Border
     0xFF, 0x00,
@@ -23,7 +25,7 @@ const uint8_t initiated_simple[] = {
 
 void SSD1306::initiate() const
 {
-    printf("Displaying simple 'Initiated' text\n");
+    log("Displaying simple 'Initiated' text\n");
     
     // Set page 3 (middle of screen)
     this->sendCommand(0xB0 + 3);
@@ -37,11 +39,11 @@ int SSD1306::draw_vertical_line() const
 {
     if (!this->is_turned_on)
     {
-        printf("Display wasn't turned on \n");
+        log("Display wasn't turned on \n");
         return 1;
     }
     
-    printf("Drawing vertical line\n");
+    log("Drawing vertical line\n");
     this->sendCommand(0x20);  // Set memory addressing mode  
     this->sendCommand(0x02);  // Page addressing mode
 
@@ -79,7 +81,7 @@ void SSD1306::turn_on()
 
 void SSD1306::debug_addressing() const
 {
-    printf("Testing addressing modes\n");
+    log("Testing addressing modes\n");
     
     // FORCE page addressing mode
     this->sendCommand(0x20);  // Set Memory Addressing Mode
@@ -126,7 +128,7 @@ void SSD1306::test_pixel_addressing() const
 
 void SSD1306::test_simple_line() const
 {
-    printf("Testing simple horizontal line\n");
+    log("Testing simple horizontal line\n");
     
     // Clear everything first
     for(int page = 0; page < 8; page++) {

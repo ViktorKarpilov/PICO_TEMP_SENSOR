@@ -28,8 +28,8 @@ void Paint_NewImage(UBYTE *image, UWORD Width, UWORD Height, UWORD Rotate, UWORD
 
     Paint.WidthByte = (Width % 8 == 0) ? (Width / 8) : (Width / 8 + 1);
     Paint.HeightByte = Height;
-    //    printf("WidthByte = %d, HeightByte = %d\r\n", Paint.WidthByte, Paint.HeightByte);
-    //    printf(" LCD_WIDTH / 8 = %d\r\n",  122 / 8);
+    //    log("WidthByte = %d, HeightByte = %d\r\n", Paint.WidthByte, Paint.HeightByte);
+    //    log(" LCD_WIDTH / 8 = %d\r\n",  122 / 8);
 
     Paint.Rotate = Rotate;
     Paint.Mirror = MIRROR_NONE;
@@ -298,8 +298,8 @@ void Paint_DrawPoint(UWORD Xpoint, UWORD Ypoint, UWORD Color,
     if (Xpoint > Paint.Width || Ypoint > Paint.Height)
     {
         Debug("Paint_DrawPoint Input exceeds the normal display range\r\n");
-        printf("Xpoint = %d , Paint.Width = %d  \r\n ", Xpoint, Paint.Width);
-        printf("Ypoint = %d , Paint.Height = %d  \r\n ", Ypoint, Paint.Height);
+        log("Xpoint = %d , Paint.Width = %d  \r\n ", Xpoint, Paint.Width);
+        log("Ypoint = %d , Paint.Height = %d  \r\n ", Ypoint, Paint.Height);
         return;
     }
 
@@ -312,7 +312,7 @@ void Paint_DrawPoint(UWORD Xpoint, UWORD Ypoint, UWORD Color,
             {
                 if (Xpoint + XDir_Num - Dot_Pixel < 0 || Ypoint + YDir_Num - Dot_Pixel < 0)
                     break;
-                // printf("x = %d, y = %d\r\n", Xpoint + XDir_Num - Dot_Pixel, Ypoint + YDir_Num - Dot_Pixel);
+                // log("x = %d, y = %d\r\n", Xpoint + XDir_Num - Dot_Pixel, Ypoint + YDir_Num - Dot_Pixel);
                 Paint_SetPixel(Xpoint + XDir_Num - Dot_Pixel, Ypoint + YDir_Num - Dot_Pixel, Color);
             }
         }
@@ -752,7 +752,7 @@ void Paint_DrawNum(UWORD Xpoint, UWORD Ypoint, double Nummber,
                    sFONT *Font, UWORD Digit, UWORD Color_Foreground, UWORD Color_Background)
 {
     char Str[ARRAY_LEN];
-    sprintf(Str, "%.*lf", Digit + 1, Nummber);
+    slog(Str, "%.*lf", Digit + 1, Nummber);
     char *pStr = (char *)malloc((strlen(Str)) * sizeof(char));
     memcpy(pStr, Str, (strlen(Str) - 1));
     *(pStr + strlen(Str) - 1) = '\0';

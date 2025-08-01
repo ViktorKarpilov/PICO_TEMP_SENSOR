@@ -119,82 +119,82 @@ function:
 
 static void OLED_InitReg(void)
 {
-    printf("Writing 0xae (turn off OLED display)...\r\n");
+    log("Writing 0xae (turn off OLED display)...\r\n");
     OLED_WriteReg(0xae);	/*turn off OLED display*/
     
-    printf("Writing 0x00 (set lower column address)...\r\n");
+    log("Writing 0x00 (set lower column address)...\r\n");
     OLED_WriteReg(0x00);	/*set lower column address*/ 
     
-    printf("Writing 0x10 (set higher column address)...\r\n");
+    log("Writing 0x10 (set higher column address)...\r\n");
     OLED_WriteReg(0x10);	/*set higher column address*/ 
     
-    printf("Writing 0xB0 (set page address)...\r\n");
+    log("Writing 0xB0 (set page address)...\r\n");
     OLED_WriteReg(0xB0);	/*set page address*/ 
 	
-    printf("Writing 0xdc (set display start line)...\r\n");
+    log("Writing 0xdc (set display start line)...\r\n");
     OLED_WriteReg(0xdc);	/*set display start line*/ 
     
-    printf("Writing 0x00 (display start line value)...\r\n");
+    log("Writing 0x00 (display start line value)...\r\n");
     OLED_WriteReg(0x00);  
     
-    printf("Writing 0x81 (contract control)...\r\n");
+    log("Writing 0x81 (contract control)...\r\n");
     OLED_WriteReg(0x81);	/*contract control*/ 
     
-    printf("Writing 0x6f (contrast value 128)...\r\n");
+    log("Writing 0x6f (contrast value 128)...\r\n");
     OLED_WriteReg(0x6f);	/*128*/ 
     
-    printf("Writing 0x21 (Set Memory addressing mode)...\r\n");
+    log("Writing 0x21 (Set Memory addressing mode)...\r\n");
     OLED_WriteReg(0x21);  	/* Set Memory addressing mode (0x20/0x21) */ 
 	
-    printf("Writing 0xa0 (set segment remap)...\r\n");
+    log("Writing 0xa0 (set segment remap)...\r\n");
     OLED_WriteReg(0xa0); 	/*set segment remap*/ 
     
-    printf("Writing 0xc0 (Com scan direction)...\r\n");
+    log("Writing 0xc0 (Com scan direction)...\r\n");
     OLED_WriteReg(0xc0);  	/*Com scan direction*/ 
     
-    printf("Writing 0xa4 (Disable Entire Display On)...\r\n");
+    log("Writing 0xa4 (Disable Entire Display On)...\r\n");
     OLED_WriteReg(0xa4);	/*Disable Entire Display On (0xA4/0xA5)*/ 
     
-    printf("Writing 0xa6 (normal/reverse)...\r\n");
+    log("Writing 0xa6 (normal/reverse)...\r\n");
     OLED_WriteReg(0xa6);	/*normal / reverse*/
     
-    printf("Writing 0xa8 (multiplex ratio)...\r\n");
+    log("Writing 0xa8 (multiplex ratio)...\r\n");
     OLED_WriteReg(0xa8);	/*multiplex ratio*/ 
     
-    printf("Writing 0x3f (duty = 1/64)...\r\n");
+    log("Writing 0x3f (duty = 1/64)...\r\n");
     OLED_WriteReg(0x3f);  	/*duty = 1/64*/ 
   
-    printf("Writing 0xd3 (set display offset)...\r\n");
+    log("Writing 0xd3 (set display offset)...\r\n");
     OLED_WriteReg(0xd3);  	/*set display offset*/ 
     
-    printf("Writing 0x60 (display offset value)...\r\n");
+    log("Writing 0x60 (display offset value)...\r\n");
     OLED_WriteReg(0x60);
     
-    printf("Writing 0xd5 (set osc division)...\r\n");
+    log("Writing 0xd5 (set osc division)...\r\n");
     OLED_WriteReg(0xd5);	/*set osc division*/ 
     
-    printf("Writing 0x41 (osc division value)...\r\n");
+    log("Writing 0x41 (osc division value)...\r\n");
     OLED_WriteReg(0x41);
 		
-    printf("Writing 0xd9 (set pre-charge period)...\r\n");
+    log("Writing 0xd9 (set pre-charge period)...\r\n");
     OLED_WriteReg(0xd9); 	/*set pre-charge period*/ 
     
-    printf("Writing 0x22 (pre-charge value)...\r\n");
+    log("Writing 0x22 (pre-charge value)...\r\n");
     OLED_WriteReg(0x22);   
     
-    printf("Writing 0xdb (set vcomh)...\r\n");
+    log("Writing 0xdb (set vcomh)...\r\n");
     OLED_WriteReg(0xdb); 	/*set vcomh*/ 
     
-    printf("Writing 0x35 (vcomh value)...\r\n");
+    log("Writing 0x35 (vcomh value)...\r\n");
     OLED_WriteReg(0x35);  
     
-    printf("Writing 0xad (set charge pump enable)...\r\n");
+    log("Writing 0xad (set charge pump enable)...\r\n");
     OLED_WriteReg(0xad); 	/*set charge pump enable*/ 
     
-    printf("Writing 0x8a (Set DC-DC enable)...\r\n");
+    log("Writing 0x8a (Set DC-DC enable)...\r\n");
     OLED_WriteReg(0x8a);	/*Set DC-DC enable (a=0:disable; a=1:enable) */
     
-    printf("OLED_InitReg() COMPLETED SUCCESSFULLY!\r\n");
+    log("OLED_InitReg() COMPLETED SUCCESSFULLY!\r\n");
 }
 
 
@@ -204,26 +204,26 @@ function:
 ********************************************************************************/
 void OLED_1in3_C_Init()
 {
-    printf("Starting OLED_Reset()...\r\n");
+    log("Starting OLED_Reset()...\r\n");
     //Hardware reset
     OLED_Reset();
-    printf("OLED_Reset() completed\r\n");
+    log("OLED_Reset() completed\r\n");
     
-    printf("Starting OLED_InitReg()...\r\n");
+    log("Starting OLED_InitReg()...\r\n");
     //Set the initialization register
     OLED_InitReg();
-    printf("OLED_InitReg() completed\r\n");
+    log("OLED_InitReg() completed\r\n");
     
-    printf("Starting 200ms delay...\r\n");
+    log("Starting 200ms delay...\r\n");
     DEV_Delay_ms(200);
-    printf("Delay completed\r\n");
+    log("Delay completed\r\n");
     
-    printf("Starting OLED_WriteReg(0xaf)...\r\n");
+    log("Starting OLED_WriteReg(0xaf)...\r\n");
     //Turn on the OLED display
     OLED_WriteReg(0xaf);
-    printf("OLED_WriteReg(0xaf) completed\r\n");
+    log("OLED_WriteReg(0xaf) completed\r\n");
     
-    printf("OLED_1in3_C_Init() FULLY COMPLETED\r\n");
+    log("OLED_1in3_C_Init() FULLY COMPLETED\r\n");
 }
 
 
@@ -275,7 +275,7 @@ void OLED_1in3_C_Display(const UBYTE *Image)
         OLED_WriteReg(0x10 + (column >> 4));  //Set column higt start address
         for (UWORD i = 0; i < Width; i++) {
             temp = Image[i + j * Width];
-            // printf("0x%x \r\n",temp);
+            // log("0x%x \r\n",temp);
             temp = reverse(temp);	//reverse the buffer
             OLED_WriteData(temp);
          }
