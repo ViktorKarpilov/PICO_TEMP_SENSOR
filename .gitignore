@@ -3,3 +3,6 @@
 generated/config_html.h
 generated/status_html.h
 /.vscode/
+/tests_build/
+html/.idea
+tests/build

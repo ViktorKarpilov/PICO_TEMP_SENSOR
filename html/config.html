@@ -119,7 +119,8 @@
 
     function updateStatus() {
         console.log("Update status")
-        fetch('/api/status')
+        // fetch('/api/status')
+        fetch('http://localhost:8080')
             .then(response => response.json())
             .then(data => {
                 document.getElementById('temp').textContent = data.temperature + '°C';
@@ -136,7 +137,7 @@
     setInterval(updateStatus, 3000);
 
     const form = document.getElementById('configForm');
-    
+
     function toggleButton(){
         const btn = document.getElementById('submitBtn');
         btn.disabled = !btn.disabled;
@@ -148,7 +149,7 @@
         const formData = new FormData(form);
 
         try {
-            fetch('/api/config', {
+            fetch('http://localhost:8080', {
                 method: "POST",
                 body: formData,
             });
