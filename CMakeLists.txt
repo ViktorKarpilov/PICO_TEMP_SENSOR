@@ -8,6 +8,7 @@ set(PICO_BOARD pico2_w)
 set(PICO_NO_PICOTOOL TRUE)
 
 set(picotool_EXECUTABLE "picotool")
+include(arm_system.cmake)
 
 # pico_sdk_import.cmake is a single file copied from this SDK
 # note: this must happen before project()
@@ -30,17 +31,7 @@ message(STATUS "========================")
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-execute_process(
-        COMMAND python ${CMAKE_SOURCE_DIR}/tools/html_to_cpp.py
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-)
-
-add_executable(TEMP_SENSOR_C main.cpp lwipopts.h generated/config_html.h generated/status_html.h
-        src/network/wifi_service/WifiService.cpp
-        src/network/wifi_service/WifiService.h
-        src/network/wifi_service/WifiService.cpp
-        src/network/http_server/Helpers/HTTPHelper.cpp
-        src/network/http_server/Helpers/HTTPHelper.cpp)
+add_executable(TEMP_SENSOR_C main.cpp lwipopts.h generated/config_html.h generated/status_html.h)
 
 pico_enable_stdio_usb(TEMP_SENSOR_C 1)
 pico_enable_stdio_uart(TEMP_SENSOR_C 0)

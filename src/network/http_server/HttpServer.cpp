@@ -9,10 +9,8 @@
 #include "lwip/tcp.h"
 #include "lwip/pbuf.h"
 #include <src/config.h>
-#include <src/enviroment_sensor/enviroment_sensor.h>
-#include "Helpers/HTTPHelper.cpp"
+#include "Helpers/HttpServerHelpers.h"
 
-#include "generated/config_html.h"
 #define HTTP_SERVER_DEBUG 0
 
 #ifdef HTTP_SERVER_DEBUG
@@ -46,6 +44,46 @@ HttpServer::HttpServer(WifiService* wifi_service) : server_pcb(nullptr), wifi_se
 HttpServer::~HttpServer()
 {
     deinit();
+}
+
+static int parse_request_package(const pbuf* package, HTTPMessage& message)
+{
+    char request_buffer[CONFIG::MAX_REQUEST_SIZE];
+
+    uint16_t copied = pbuf_copy_partial(package, request_buffer,
+                                        package->tot_len, 0);
+
+    request_buffer[copied] = '\0';
+    const std::string content(request_buffer);
+
+    const auto lines = HttpServerHelpers::split_by_lines(content);
+
+    int start_index = 0;
+    bool found_body = !message.body.empty();
+
+    if (!found_body && message.start_line.empty())
+    {
+        message.start_line = lines[0];
+        start_index = 1;
+    }
+
+    for (int i = start_index; i < lines.size(); i++)
+    {
+        if (!found_body)
+        {
+            if (lines[i].empty())
+            {
+                found_body = true;
+                continue;
+            }
+            message.headers.push_back(lines[i]);
+            continue;
+        }
+
+        message.body += lines[i];
+    }
+
+    return ERR_OK;
 }
 
 class HttpServer::HttpServerCommunication
@@ -118,23 +156,24 @@ public:
         switch (type)
         {
         case StatusRequest:
-            response = build_status_api_response();
+            response = HttpServerHelpers::build_status_api_response();
             HTTP_SERVER_PRINT("HTTP: Serving API request\n");
             break;
         case ConfigRequest:
-            response = build_freezer_config_page();
+            response = HttpServerHelpers::build_freezer_config_page();
             HTTP_SERVER_PRINT("HTTP: Serving config page, length: %d\n", response.length());
             break;
         case ConnectionResponse:
-            response = connection_request_handler();
+            // TODO
+            response = HttpServerHelpers::connection_request_handler();
             HTTP_SERVER_PRINT("HTTP: Handling connection response\n");
             break;
         case ConnectivityCheck:
-            response = build_connectivity_check_response(conn_state->request->start_line);
+            response = HttpServerHelpers::build_connectivity_check_response(conn_state->request->start_line);
             HTTP_SERVER_PRINT("HTTP: Connectivity check response\n");
             break;
         case Unknown:
-            response = build_captive_portal_response();
+            response = HttpServerHelpers::build_captive_portal_response();
             HTTP_SERVER_PRINT("HTTP: Redirecting to captive portal\n");
             break;
         }
@@ -316,74 +355,6 @@ public:
         {is_api_request, StatusRequest},
         {is_connection_response, ConnectionResponse}
     };
-
-#pragma region ResponseBuilders
-    static std::string build_connectivity_check_response(const std::string& request)
-    {
-        if (is_android_internet_check(request))
-        {
-            // Android expects 204 No Content for "internet is working"
-            return "HTTP/1.1 204 No Content\r\n"
-                "Connection: close\r\n"
-                "\r\n";
-        }
-
-        return build_captive_portal_response();
-    }
-
-    static std::string connection_request_handler()
-    {
-        return "HTTP/1.1 302 Found\r\n"
-            "Location: http://7.7.7.7/config\r\n"
-            "Content-Length: 0\r\n"
-            "Connection: close\r\n"
-            "\r\n";
-    }
-
-    static std::string build_captive_portal_response()
-    {
-        return "HTTP/1.1 302 Found\r\n"
-            "Location: http://7.7.7.7/config\r\n"
-            "Content-Length: 0\r\n"
-            "Connection: close\r\n"
-            "\r\n";
-    }
-
-    static std::string build_freezer_config_page()
-    {
-        const std::string& html = HtmlResources::CONFIG_PAGE;
-
-        // CRITICAL: Ensure exact byte count
-        size_t actual_length = html.length();
-
-        return "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/html; charset=utf-8\r\n"
-            "Content-Length: " + std::to_string(actual_length) + "\r\n"
-            "Cache-Control: no-cache\r\n"
-            "Connection: close\r\n"
-            "\r\n" + html;
-    }
-
-    static std::string build_status_api_response()
-    {
-        double temperature = EnvironmentSensor::readTemperature();
-        double humidity = EnvironmentSensor::readHumidity();
-
-        std::string json = "{"
-            "\"temperature\":" + std::to_string(temperature) + ","
-            "\"humidity\":" + std::to_string(humidity) + ","
-            "\"status\":\"active\""
-            "}";
-
-        return "HTTP/1.1 200 OK\r\n"
-            "Content-Type: application/json\r\n"
-            "Content-Length: " + std::to_string(json.length()) + "\r\n"
-            "Access-Control-Allow-Origin: *\r\n"
-            "Connection: close\r\n"
-            "\r\n" + json;
-    }
-
-#pragma endregion ResponseBuilders
 };
 
 int HttpServer::init(uint16_t port)
