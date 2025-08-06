@@ -33,9 +33,9 @@ namespace HttpServerHelpers
 
     std::string build_freezer_config_page();
 
-    std::string build_status_api_response();
+    std::string build_status_api_response(const double temperature, const double humidity);
 
-    inline std::vector<std::string> split_by_lines(const std::string& text);
+    std::vector<std::string> split_by_lines(const std::string& text);
 }
 
 #endif //HTTPSERVERHELPERS_H

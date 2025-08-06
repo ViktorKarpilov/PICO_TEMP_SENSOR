@@ -8,7 +8,7 @@
 
 namespace HttpServerHelpers
 {
-    inline std::vector<std::string> split_by_lines(const std::string& text)
+    std::vector<std::string> split_by_lines(const std::string& text)
     {
         std::vector<std::string> lines;
         size_t start = 0;

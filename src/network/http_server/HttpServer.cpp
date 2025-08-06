@@ -10,6 +10,7 @@
 #include "lwip/pbuf.h"
 #include <src/config.h>
 #include "Helpers/HttpServerHelpers.h"
+#include "src/enviroment_sensor/enviroment_sensor.h"
 
 #define HTTP_SERVER_DEBUG 0
 
@@ -18,6 +19,8 @@
 #else
     #define HTTP_SERVER_PRINT(fmt, ...) ((void)0)
 #endif
+
+using namespace std;
 
 // Connection state structure for each client
 struct http_connection_state
@@ -156,7 +159,7 @@ public:
         switch (type)
         {
         case StatusRequest:
-            response = HttpServerHelpers::build_status_api_response();
+            response = HttpServerHelpers::build_status_api_response(EnvironmentSensor::readTemperature(), EnvironmentSensor::readHumidity());
             HTTP_SERVER_PRINT("HTTP: Serving API request\n");
             break;
         case ConfigRequest:
@@ -164,10 +167,24 @@ public:
             HTTP_SERVER_PRINT("HTTP: Serving config page, length: %d\n", response.length());
             break;
         case ConnectionResponse:
-            // TODO
-            response = HttpServerHelpers::connection_request_handler();
-            HTTP_SERVER_PRINT("HTTP: Handling connection response\n");
-            break;
+            {
+                string ssid;
+                string pass;
+       
+                HTTP_SERVER_PRINT("HTTP: RESPONSE\n %s \n", conn_state->request->body.c_str());
+                HTTP_SERVER_PRINT("HTTP: HEADER len: %d\n", conn_state->request->headers.size());
+
+                for (const auto& header : conn_state->request->headers)
+                {
+                    HTTP_SERVER_PRINT("HTTP: HEADER %s \n", header.c_str());
+                }
+       
+                response = HttpServerHelpers::connection_request_handler(conn_state->request->body, pass, ssid);
+       
+                HTTP_SERVER_PRINT("HTTP: Handling connection response\n");
+                HTTP_SERVER_PRINT("HTTP: Handling connection response pass:%s ssid:%s\n", pass.c_str(), ssid.c_str());
+                break;
+            }
         case ConnectivityCheck:
             response = HttpServerHelpers::build_connectivity_check_response(conn_state->request->start_line);
             HTTP_SERVER_PRINT("HTTP: Connectivity check response\n");
