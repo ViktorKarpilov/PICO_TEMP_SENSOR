@@ -2,22 +2,33 @@
 // Created by PC on 8/4/2025.
 //
 
+#include <format>
 #include <string>
 #include <generated/config_html.h>
 #include "HttpServerHelpers.h"
+#include <regex>
+#include <string.h>
+using namespace std;
 
 namespace HttpServerHelpers
 {
-    bool is_android_internet_check(const std::string& request)
+    bool is_android_internet_check(const string& request)
     {
-        return request.find("connectivitycheck.gstatic.com") != std::string::npos ||
-            request.find("generate_204") != std::string::npos ||
-            request.find("readaloud.googleapis.com") != std::string::npos ||
-            request.find("clients4.google.com") != std::string::npos ||
-            request.find("alt3-mtalk.google.com") != std::string::npos;
+        return request.find("connectivitycheck.gstatic.com") != string::npos ||
+            request.find("generate_204") != string::npos ||
+            request.find("readaloud.googleapis.com") != string::npos ||
+            request.find("clients4.google.com") != string::npos ||
+            request.find("alt3-mtalk.google.com") != string::npos;
     }
 
-    std::string build_captive_portal_response()
+    string build_error_response()
+    {
+        return "HTTP/1.1 400 Bad Request\r\n"
+            "Connection: close\r\n"
+            "\r\n";
+    }
+
+    string build_captive_portal_response()
     {
         return "HTTP/1.1 302 Found\r\n"
             "Location: http://7.7.7.7/config\r\n"
@@ -26,7 +37,7 @@ namespace HttpServerHelpers
             "\r\n";
     }
 
-    std::string build_connectivity_check_response(const std::string& request)
+    string build_connectivity_check_response(const string& request)
     {
         if (is_android_internet_check(request))
         {
@@ -39,16 +50,84 @@ namespace HttpServerHelpers
         return build_captive_portal_response();
     }
 
-    std::string connection_request_handler(const std::string& request, std::string& pass, std::string& ssid)
-    {
-        return "HTTP/1.1 202 Accepted\r\n"
-            "Connection: close\r\n"
-            "\r\n";
+    void clean_body_value(string& body) {
+        // Remove first 3 lines
+        for (int i = 0; i < 3; ++i) {
+            size_t pos = body.find('\n');
+            if (pos != string::npos) body = body.substr(pos + 1);
+        }
+        // Remove last line
+        size_t last_nl = body.find_last_of('\n');
+        if (last_nl != string::npos) body = body.substr(0, last_nl);
+        // Trim
+        body.erase(0, body.find_first_not_of(" \t\r\n"));
+        body.erase(body.find_last_not_of(" \t\r\n") + 1);
     }
 
-    std::string build_freezer_config_page()
+    string connection_request_handler(const HTTPMessage &message, string& pass, string& ssid)
     {
-        const std::string& html = HtmlResources::CONFIG_PAGE;
+        const regex property_names_regexp(R"((name="ssid"|name="password")(\w+))");
+        smatch match;
+        constexpr int expected_count = 2;
+        string form_data[expected_count];
+
+        sregex_iterator iter(message.body.begin(), message.body.end(), property_names_regexp);
+        sregex_iterator end;
+
+        if (distance(iter, end) != expected_count) {
+            return build_error_response(); 
+        }
+
+        for (int i = 0; i < expected_count && iter != end; ++i, ++iter) {
+            form_data[i] = (*iter)[2].str();
+        }
+
+        ssid = form_data[0];
+        pass = form_data[1];
+
+        return "HTTP/1.1 202 Accepted\r\n"
+               "Connection: close\r\n"
+               "\r\n";
+    }
+
+    string connection_request_handler(const string& request, string& pass, string& ssid)
+    {
+        const regex delimiter_regexp(R"(boundary=([^\s;]+))");
+        smatch match;
+
+        if (!regex_search(request, match, delimiter_regexp) || match.size() != 2) {
+            return build_error_response();
+        }
+
+        const string delimiter = match[1].str();
+        const string pattern = "--" + delimiter + R"(([\s\S]*?)(?=------))";
+        const regex groups_regexp(pattern);
+
+        sregex_iterator iter(request.begin(), request.end(), groups_regexp);
+        sregex_iterator end;
+
+        constexpr int expected_count = 2;
+        if (distance(iter, end) != expected_count) {
+            return build_error_response(); 
+        }
+
+        string form_fields[expected_count];
+        for (int i = 0; i < expected_count && iter != end; ++i, ++iter) {
+            form_fields[i] = (*iter)[1].str();
+            clean_body_value(form_fields[i]);
+        }
+
+        ssid = form_fields[0];
+        pass = form_fields[1];
+
+        return "HTTP/1.1 202 Accepted\r\n"
+               "Connection: close\r\n"
+               "\r\n";
+    }
+
+    string build_freezer_config_page()
+    {
+        const string& html = HtmlResources::CONFIG_PAGE;
 
         // CRITICAL: Ensure exact byte count
         size_t actual_length = html.length();
@@ -61,9 +140,9 @@ namespace HttpServerHelpers
             "\r\n" + html;
     }
 
-    std::string build_status_api_response(const double temperature, const double humidity)
+    string build_status_api_response(const double temperature, const double humidity)
     {
-        std::string json = "{"
+        string json = "{"
             "\"temperature\":" + std::to_string(temperature) + ","
             "\"humidity\":" + std::to_string(humidity) + ","
             "\"status\":\"active\""
@@ -75,5 +154,29 @@ namespace HttpServerHelpers
             "Access-Control-Allow-Origin: *\r\n"
             "Connection: close\r\n"
             "\r\n" + json;
+    }
+
+    string build_get_ssids_response(uint8_t ssids[][32], const int count)
+    {
+        std::string body = "{\"ssids\":[";
+    
+        for (int i = 0; i < count; ++i)
+        {
+            if (i > 0) body.append(",");
+        
+            const int len = strnlen(reinterpret_cast<const char*>(ssids[i]), 32);
+            body.append("\""); 
+            body.append(std::string(reinterpret_cast<const char*>(ssids[i]), len));
+            body.append("\"");
+        }
+    
+        body.append("]}"); 
+    
+        return "HTTP/1.1 200 OK\r\n"
+               "Content-Type: application/json\r\n"
+               "Content-Length: " + std::to_string(body.length()) + "\r\n"
+               "Access-Control-Allow-Origin: *\r\n"
+               "Connection: close\r\n"
+               "\r\n" + body;
     }
 }

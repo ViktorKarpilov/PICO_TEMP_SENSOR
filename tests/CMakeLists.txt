@@ -12,6 +12,7 @@ add_executable(TEMP_SENSOR_TESTS main.cpp
         network/http_server/HttpServerTests.h
 
         ../src/network/http_server/Helpers/HttpServerHelpers.h
+        ../src/network/http_server/Helpers/HTTPHelper.cpp
         ../src/network/http_server/Helpers/HTTPResponseBuilder.cpp)
 
 target_include_directories(TEMP_SENSOR_TESTS PRIVATE

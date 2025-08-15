@@ -24,6 +24,8 @@ enum RequestType : uint8_t
     ConnectionResponse,
 
     ConnectivityCheck,
+
+    GetSSIDs,
     Unknown
 };
 

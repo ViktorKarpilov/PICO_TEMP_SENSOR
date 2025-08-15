@@ -10,6 +10,8 @@
 #include "lwip/pbuf.h"
 #include <src/config.h>
 #include "Helpers/HttpServerHelpers.h"
+#include "pico/cyw43_arch.h"
+#include "src/enviroment_sensor/enviroment_sensor.h"
 
 #define HTTP_SERVER_DEBUG 0
 
@@ -18,6 +20,8 @@
 #else
     #define HTTP_SERVER_PRINT(fmt, ...) ((void)0)
 #endif
+
+using namespace std;
 
 // Connection state structure for each client
 struct http_connection_state
@@ -31,59 +35,22 @@ struct http_connection_state
     HTTPMessage *request;
     bool request_ready;
 
+    WifiService *wifi_service;
+
     http_connection_state() : bytes_sent(0), bytes_queued(0), bytes_received(0), response_ready(false),
-                              request(nullptr), request_ready(false)
+                              request(nullptr), request_ready(false), wifi_service(nullptr)
     {
     }
 };
 
-HttpServer::HttpServer(WifiService* wifi_service) : server_pcb(nullptr), wifi_service(wifi_service)
+HttpServer::HttpServer(WifiService* wifi_service) : server_pcb(nullptr)
 {
+    this->wifi_service = wifi_service;
 }
 
 HttpServer::~HttpServer()
 {
     deinit();
-}
-
-static int parse_request_package(const pbuf* package, HTTPMessage& message)
-{
-    char request_buffer[CONFIG::MAX_REQUEST_SIZE];
-
-    uint16_t copied = pbuf_copy_partial(package, request_buffer,
-                                        package->tot_len, 0);
-
-    request_buffer[copied] = '\0';
-    const std::string content(request_buffer);
-
-    const auto lines = HttpServerHelpers::split_by_lines(content);
-
-    int start_index = 0;
-    bool found_body = !message.body.empty();
-
-    if (!found_body && message.start_line.empty())
-    {
-        message.start_line = lines[0];
-        start_index = 1;
-    }
-
-    for (int i = start_index; i < lines.size(); i++)
-    {
-        if (!found_body)
-        {
-            if (lines[i].empty())
-            {
-                found_body = true;
-                continue;
-            }
-            message.headers.push_back(lines[i]);
-            continue;
-        }
-
-        message.body += lines[i];
-    }
-
-    return ERR_OK;
 }
 
 class HttpServer::HttpServerCommunication
@@ -113,7 +80,7 @@ public:
         return ERR_OK;
     }
 
-    static err_t recv_callback(void* arg, tcp_pcb* tpcb, pbuf* package, err_t err)
+    static err_t recv_callback(void* arg, struct tcp_pcb* tpcb, pbuf* package, err_t err)
     {
         auto* conn_state = static_cast<http_connection_state*>(arg);
 
@@ -134,29 +101,25 @@ public:
         if (package->tot_len > CONFIG::MAX_REQUEST_SIZE - 1) {
             return ERR_VAL;
         }
-
-        HTTP_SERVER_PRINT("HTTP: Request start parsing");
-
         if (conn_state->request == nullptr)
         {
             HTTP_SERVER_PRINT("HTTP: New message");
             conn_state->request = new HTTPMessage();
         }
 
-        parse_request_package(package, *conn_state->request);
+        char request_buffer[CONFIG::MAX_REQUEST_SIZE];
+        pbuf_copy_partial(package, request_buffer,
+                                            package->tot_len, 0);
+
+        HttpServerHelpers::parse_request_package(request_buffer, *conn_state->request);
 
         HTTP_SERVER_PRINT("HTTP: Request received (%.100s...)\n", conn_state->request->body.c_str());
 
-        // Build response (same logic as before)
         std::string response;
-        const auto type = determine_request_type(conn_state->request->start_line);
-
-        printf("Type: %d", type);
-
-        switch (type)
+        switch (const auto type = determine_request_type(conn_state->request->start_line))
         {
         case StatusRequest:
-            response = HttpServerHelpers::build_status_api_response();
+            response = HttpServerHelpers::build_status_api_response(EnvironmentSensor::readTemperature(), EnvironmentSensor::readHumidity());
             HTTP_SERVER_PRINT("HTTP: Serving API request\n");
             break;
         case ConfigRequest:
@@ -164,14 +127,27 @@ public:
             HTTP_SERVER_PRINT("HTTP: Serving config page, length: %d\n", response.length());
             break;
         case ConnectionResponse:
-            // TODO
-            response = HttpServerHelpers::connection_request_handler();
-            HTTP_SERVER_PRINT("HTTP: Handling connection response\n");
-            break;
+            {
+                string ssid;
+                string pass;
+       
+                response = HttpServerHelpers::connection_request_handler(*conn_state->request, pass, ssid);
+       
+                HTTP_SERVER_PRINT("HTTP: Handling connection response pass:%s ssid:%s\n", pass.c_str(), ssid.c_str());
+                break;
+            }
         case ConnectivityCheck:
             response = HttpServerHelpers::build_connectivity_check_response(conn_state->request->start_line);
             HTTP_SERVER_PRINT("HTTP: Connectivity check response\n");
             break;
+        case GetSSIDs:
+            {
+                uint8_t my_ssids[50][32]{};
+                const int count = conn_state->wifi_service->get_ssids(my_ssids, 50);
+                response = HttpServerHelpers::build_get_ssids_response(my_ssids, count);
+                HTTP_SERVER_PRINT("HTTP: response:%s \n", response.c_str());
+                break;
+            }
         case Unknown:
             response = HttpServerHelpers::build_captive_portal_response();
             HTTP_SERVER_PRINT("HTTP: Redirecting to captive portal\n");
@@ -347,13 +323,19 @@ public:
         return request.find("POST /api/connection") != std::string::npos;
     }
 
+    static bool is_get_ssids(const std::string& request)
+    {
+        return request.find("GET /api/ssids") != std::string::npos;
+    }
+
 #pragma endregion RequestParsers
 
     inline static std::pair<RequestChecker, RequestType> request_types_reference_table[] = {
         {is_connectivity_check, ConnectivityCheck},
         {is_config_request, ConfigRequest},
         {is_api_request, StatusRequest},
-        {is_connection_response, ConnectionResponse}
+        {is_connection_response, ConnectionResponse},
+        {is_get_ssids, GetSSIDs}
     };
 };
 

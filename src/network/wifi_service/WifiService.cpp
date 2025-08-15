@@ -4,22 +4,15 @@
 
 #include "WifiService.h"
 
+#include <cstring>
 #include <pico/cyw43_arch.h>
 #include <src/network/dhcpserver/DhcpServer.h>
 #include <src/network/dnsserver/DnsServer.h>
 #include <src/network/http_server/HttpServer.h>
 
-enum wifi_mode
-{
-    Offline = 0,
-    CaptivePortalMode,
-    StationMode,
-    WifiScanningMode,
-};
-
 struct wifi_state
 {
-    wifi_mode mode = Offline;
+    WifiService *self;
     wifi_mode next_mode = Offline;
 
     DhcpServer *dhcp = new DhcpServer();
@@ -35,8 +28,10 @@ struct wifi_state
 
 WifiService::WifiService()
 {
+    this->mode = Offline;
     this->state = new wifi_state();
     this->state->http = new HttpServer(this);
+    this->state->self = this;
 }
 WifiService::~WifiService() = default;
 
@@ -46,10 +41,11 @@ int scan_result(void* env, const cyw43_ev_scan_result_t* result)
     const auto state = static_cast<wifi_state*>(env);
 
     if (result == nullptr) {
-        state->mode = state->next_mode;
+        state->self->mode = state->next_mode;
         state->next_mode = Offline;
         return 0;
     }
+    printf("SSID During scan: %s\n", reinterpret_cast<const char*>(result->ssid));
 
     if (state->ssids_count < 50) {
         memcpy(state->ssids_list[state->ssids_count], result->ssid, result->ssid_len);
@@ -59,10 +55,10 @@ int scan_result(void* env, const cyw43_ev_scan_result_t* result)
     return 0;
 }
 
-int WifiService::discover_identifiers() const
+int WifiService::discover_identifiers()
 {
-    this->state->next_mode = this->state->mode;
-    this->state->mode = WifiScanningMode;
+    this->state->next_mode = this->mode;
+    this->mode = WifiScanningMode;
     cyw43_wifi_scan_options_t scan_options = {};
 
     if (cyw43_wifi_scan(&cyw43_state, &scan_options, this->state, scan_result))
@@ -73,9 +69,9 @@ int WifiService::discover_identifiers() const
     return ERR_OK;
 }
 
-int WifiService::turn_on_captive_portal() const
+int WifiService::turn_on_captive_portal()
 {
-    if (this->state->mode == CaptivePortalMode)
+    if (this->mode == CaptivePortalMode)
     {
         return ERR_OK;
     }
@@ -105,7 +101,18 @@ int WifiService::turn_on_captive_portal() const
     netif_set_addr(netif_default, &CONFIG::AP_IP, &CONFIG::NETMASK, &CONFIG::AP_IP);
     cyw43_arch_lwip_end();
 
-    this->state->mode = CaptivePortalMode;
+    this->mode = CaptivePortalMode;
 
     return ERR_OK;
+}
+
+int WifiService::get_ssids(uint8_t ssids[][32], int max_count) const {
+    const int actual_count = std::min(max_count, 50);
+    
+    for(int i = 0; i < actual_count; i++) {
+        printf("SSID[%d]: %s\n", i, reinterpret_cast<char*>(ssids[i]));
+        std::memcpy(ssids[i], this->state->ssids_list[i], 32);
+    }
+    
+    return actual_count;
 }
