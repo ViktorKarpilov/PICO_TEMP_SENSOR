@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <string>
 
+#include "src/config.h"
+
 struct wifi_state;
 
 enum wifi_mode
@@ -19,15 +21,20 @@ enum wifi_mode
 
 class WifiService {
     wifi_state *state;
-public:
     WifiService();
+public:
+    static WifiService& instance() {
+        static WifiService wifi_service;
+        return wifi_service;
+    }
+
     ~WifiService();
 
     wifi_mode mode;
 
     int discover_identifiers();
     int turn_on_captive_portal();
-    int get_ssids(uint8_t ssids[][32], int max_count) const;
+    int get_ssids(uint8_t ssids[][CONFIG::SSID_MAX_SIZE], int max_count) const;
     int connect_user_network(std::string ssid, std::string password);
 };
 

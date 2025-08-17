@@ -10,16 +10,17 @@
 #include <src/network/dnsserver/DnsServer.h>
 #include <src/network/http_server/HttpServer.h>
 
+#include "src/src.h"
+
 struct wifi_state
 {
-    WifiService *self;
     wifi_mode next_mode = Offline;
 
     DhcpServer *dhcp = new DhcpServer();
     DnsServer *dns= new DnsServer();
     HttpServer *http{};
 
-    uint8_t ssids_list[50][32]{};
+    uint8_t ssids_list[50][CONFIG::SSID_MAX_SIZE]{};
     int ssids_count = 0;
 
     std::string user_network_pass;
@@ -30,22 +31,26 @@ WifiService::WifiService()
 {
     this->mode = Offline;
     this->state = new wifi_state();
-    this->state->http = new HttpServer(this);
-    this->state->self = this;
+    this->state->http = new HttpServer();
 }
-WifiService::~WifiService() = default;
-
+WifiService::~WifiService() {
+    if (state) {
+        delete state->dhcp;
+        delete state->dns;
+        delete state->http;
+        delete state;
+    }
+}
 
 int scan_result(void* env, const cyw43_ev_scan_result_t* result)
 {
     const auto state = static_cast<wifi_state*>(env);
 
     if (result == nullptr) {
-        state->self->mode = state->next_mode;
+        wifi_service.mode = state->next_mode;
         state->next_mode = Offline;
         return 0;
     }
-    printf("SSID During scan: %s\n", reinterpret_cast<const char*>(result->ssid));
 
     if (state->ssids_count < 50) {
         memcpy(state->ssids_list[state->ssids_count], result->ssid, result->ssid_len);
@@ -58,6 +63,7 @@ int scan_result(void* env, const cyw43_ev_scan_result_t* result)
 int WifiService::discover_identifiers()
 {
     this->state->next_mode = this->mode;
+    this->state->ssids_count = 0;
     this->mode = WifiScanningMode;
     cyw43_wifi_scan_options_t scan_options = {};
 
@@ -106,12 +112,11 @@ int WifiService::turn_on_captive_portal()
     return ERR_OK;
 }
 
-int WifiService::get_ssids(uint8_t ssids[][32], int max_count) const {
-    const int actual_count = std::min(max_count, 50);
+int WifiService::get_ssids(uint8_t ssids[][CONFIG::SSID_MAX_SIZE], int max_count) const {
+    const int actual_count = std::min(max_count, this->state->ssids_count);
     
     for(int i = 0; i < actual_count; i++) {
-        printf("SSID[%d]: %s\n", i, reinterpret_cast<char*>(ssids[i]));
-        std::memcpy(ssids[i], this->state->ssids_list[i], 32);
+        std::memcpy(ssids[i], this->state->ssids_list[i], CONFIG::SSID_MAX_SIZE);
     }
     
     return actual_count;

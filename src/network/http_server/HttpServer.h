@@ -33,7 +33,7 @@ typedef bool (*RequestChecker)(const std::string&);
 
 class HttpServer {
 public:
-    HttpServer(WifiService *wifi_service);
+    HttpServer();
     ~HttpServer();
     
     int init(uint16_t port = 80);
@@ -42,7 +42,6 @@ public:
     
 private:
     tcp_pcb* server_pcb;
-    WifiService *wifi_service;
 
     class HttpServerCommunication;
 };

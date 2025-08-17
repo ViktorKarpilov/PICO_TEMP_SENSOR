@@ -11,6 +11,7 @@
 #include <src/config.h>
 #include "Helpers/HttpServerHelpers.h"
 #include "pico/cyw43_arch.h"
+#include "src/src.h"
 #include "src/enviroment_sensor/enviroment_sensor.h"
 
 #define HTTP_SERVER_DEBUG 0
@@ -35,17 +36,14 @@ struct http_connection_state
     HTTPMessage *request;
     bool request_ready;
 
-    WifiService *wifi_service;
-
     http_connection_state() : bytes_sent(0), bytes_queued(0), bytes_received(0), response_ready(false),
-                              request(nullptr), request_ready(false), wifi_service(nullptr)
+                              request(nullptr), request_ready(false)
     {
     }
 };
 
-HttpServer::HttpServer(WifiService* wifi_service) : server_pcb(nullptr)
+HttpServer::HttpServer() : server_pcb(nullptr)
 {
-    this->wifi_service = wifi_service;
 }
 
 HttpServer::~HttpServer()
@@ -103,7 +101,7 @@ public:
         }
         if (conn_state->request == nullptr)
         {
-            HTTP_SERVER_PRINT("HTTP: New message");
+            HTTP_SERVER_PRINT("HTTP: New message\n");
             conn_state->request = new HTTPMessage();
         }
 
@@ -112,8 +110,6 @@ public:
                                             package->tot_len, 0);
 
         HttpServerHelpers::parse_request_package(request_buffer, *conn_state->request);
-
-        HTTP_SERVER_PRINT("HTTP: Request received (%.100s...)\n", conn_state->request->body.c_str());
 
         std::string response;
         switch (const auto type = determine_request_type(conn_state->request->start_line))
@@ -132,7 +128,6 @@ public:
                 string pass;
        
                 response = HttpServerHelpers::connection_request_handler(*conn_state->request, pass, ssid);
-       
                 HTTP_SERVER_PRINT("HTTP: Handling connection response pass:%s ssid:%s\n", pass.c_str(), ssid.c_str());
                 break;
             }
@@ -142,8 +137,8 @@ public:
             break;
         case GetSSIDs:
             {
-                uint8_t my_ssids[50][32]{};
-                const int count = conn_state->wifi_service->get_ssids(my_ssids, 50);
+                uint8_t my_ssids[50][CONFIG::SSID_MAX_SIZE]{};
+                const int count = wifi_service.get_ssids(my_ssids, 50);
                 response = HttpServerHelpers::build_get_ssids_response(my_ssids, count);
                 HTTP_SERVER_PRINT("HTTP: response:%s \n", response.c_str());
                 break;
