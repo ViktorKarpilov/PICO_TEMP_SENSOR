@@ -6,6 +6,7 @@
 #include "pico/time.h"
 #include "config.h"
 #include "enviroment_sensor/enviroment_sensor.h"
+#include "network/wifi_service/WifiService.h"
 #include "spi_display/OLED13.h"
 #include "spi_display/GUI/GUI_Paint.h"
 #include "spi_display/OLED/OLED_1in3_c.h"
@@ -14,6 +15,7 @@ void loop()
 {
     static uint32_t last_blink_time = 0;
     static uint32_t last_display_update = 0;
+    static uint32_t last_ssids_update = 0;
     static bool led_state = false;
 
     const uint32_t current_time = to_ms_since_boot(get_absolute_time());
@@ -37,6 +39,11 @@ void loop()
         Paint_Clear(BLACK);
         
         last_display_update = current_time;
+    }
+
+    if (current_time - last_ssids_update >= 5000 && wifi_service.mode != WifiScanningMode)
+    {
+        wifi_service.discover_identifiers();
     }
     
     cyw43_arch_poll();  // Process Wi-Fi events

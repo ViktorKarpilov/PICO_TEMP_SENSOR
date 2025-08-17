@@ -34,6 +34,7 @@ namespace CONFIG
     constexpr const char* AP_NAME = "picow_test";
     constexpr const char* PASSWORD = nullptr;
     constexpr ip4_addr_t AP_IP = make_ip4_addr(7, 7, 7, 7);
+    constexpr const int SSID_MAX_SIZE = 32;
 
     // DNS config
     constexpr ip4_addr_t DNS_ADDRESS = AP_IP;

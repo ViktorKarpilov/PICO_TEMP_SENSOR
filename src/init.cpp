@@ -11,8 +11,6 @@
 #include "spi_display/OLED13.h"
 #include "network/wifi_service/WifiService.h"
 
-static WifiService wifi_service;
-
 int init()
 {
     stdio_init_all();
@@ -32,7 +30,6 @@ int init()
     while (!stdio_usb_connected()) {
         sleep_ms(100);
         
-        // Don't wait forever
         if (to_ms_since_boot(get_absolute_time()) - start_time > timeout_ms) {
             printf("USB timeout - proceeding anyway\n");
             break;

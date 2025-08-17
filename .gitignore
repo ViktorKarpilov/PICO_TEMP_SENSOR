@@ -6,3 +6,4 @@ generated/status_html.h
 /tests_build/
 html/.idea
 tests/build
+tests/.idea

@@ -6,6 +6,7 @@
 #define HTTPSERVERHELPERS_H
 
 #include <string>
+#include <cstdint>
 #include <vector>
 
 enum HTTPRequestType
@@ -31,11 +32,19 @@ namespace HttpServerHelpers
 
     std::string connection_request_handler(const std::string& request, std::string& pass, std::string& ssid);
 
+    std::string connection_request_handler(const HTTPMessage &message, std::string& pass, std::string& ssid);
+
     std::string build_freezer_config_page();
 
-    std::string build_status_api_response();
+    std::string build_status_api_response(double temperature, double humidity);
 
-    inline std::vector<std::string> split_by_lines(const std::string& text);
+    std::string build_get_ssids_response(uint8_t ssids[][32], const int count);
+
+    std::string build_error_response();
+
+    std::vector<std::string> split_by_lines(const std::string& text);
+
+    int parse_request_package(char const *request_buffer, HTTPMessage& message);
 }
 
 #endif //HTTPSERVERHELPERS_H
