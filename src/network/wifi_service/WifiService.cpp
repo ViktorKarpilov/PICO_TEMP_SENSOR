@@ -11,6 +11,7 @@
 #include <src/network/http_server/HttpServer.h>
 
 #include "src/src.h"
+#include "src/network/udp_server/UdpServer.h"
 
 struct wifi_state
 {
@@ -19,6 +20,7 @@ struct wifi_state
     DhcpServer *dhcp = new DhcpServer();
     DnsServer *dns= new DnsServer();
     HttpServer *http{};
+    UdpServer *udp = nullptr;
 
     uint8_t ssids_list[50][CONFIG::SSID_MAX_SIZE]{};
     int ssids_count = 0;
@@ -120,4 +122,48 @@ int WifiService::get_ssids(uint8_t ssids[][CONFIG::SSID_MAX_SIZE], int max_count
     }
     
     return actual_count;
+}
+
+int WifiService::connect_user_network(const std::string& ssid, const std::string& password)
+{
+    this->state->dhcp->deinit();
+    this->state->dns->deinit();
+    this->state->http->deinit();
+    
+    // Disable AP mode
+    cyw43_arch_disable_ap_mode();
+    
+    // Reset network interface
+    cyw43_arch_lwip_begin();
+    netif_set_addr(netif_default, IP4_ADDR_ANY4, IP4_ADDR_ANY4, IP4_ADDR_ANY4);
+    cyw43_arch_lwip_end();
+
+    const int result = cyw43_arch_wifi_connect_timeout_ms(
+        ssid.c_str(), 
+        password.c_str(), 
+        CYW43_AUTH_WPA2_AES_PSK, 
+        30000
+    );
+    
+    if (result == 0) {
+        this->state->udp = new UdpServer();
+        this->mode = StationMode;
+        return ERR_OK;
+    }
+
+    printf("Whoopsy thaaats really bad !...");
+    return ERR_CONN;
+}
+
+void WifiService::ping() const
+{
+    if (this->mode == StationMode && this->state->udp->state->mqtt_broker_addr == nullptr)
+    {
+        this->state->udp->get_mqtt_broker_ip();
+    }
+    
+    if (this->mode == StationMode && this->state->udp->state->mqtt_broker_addr != nullptr)
+    {
+        printf("Found that son of a bitch !!");
+    }
 }

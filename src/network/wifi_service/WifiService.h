@@ -35,7 +35,8 @@ public:
     int discover_identifiers();
     int turn_on_captive_portal();
     int get_ssids(uint8_t ssids[][CONFIG::SSID_MAX_SIZE], int max_count) const;
-    int connect_user_network(std::string ssid, std::string password);
+    int connect_user_network(const std::string& ssid, const std::string& password);
+    void ping() const;
 };
 
 

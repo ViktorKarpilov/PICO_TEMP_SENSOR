@@ -55,6 +55,9 @@ namespace CONFIG
     // WEB SERVER CONFIG
     constexpr int WEB_SERVER_PORT = 80;
     constexpr size_t MAX_REQUEST_SIZE = 8192;
+
+    // UDP SERVER CONFIG
+    constexpr const char* MQTT_CALL_MESSAGE = "FIND_MQTT_BROKER";
 }
 
 #endif //CONFIG_H

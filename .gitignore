@@ -7,3 +7,7 @@ generated/status_html.h
 html/.idea
 tests/build
 tests/.idea
+collector/.idea/.idea.collector.dir/.idea
+collector/IpBeacon/bin/Debug/net8.0
+collector/IpBeacon/obj
+collector/.env
