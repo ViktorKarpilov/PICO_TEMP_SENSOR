@@ -14,6 +14,7 @@ include(arm_system.cmake)
 # note: this must happen before project()
 include(pico_sdk_import.cmake)
 
+
 project(TEMP_SENSOR_C)
 enable_language(C CXX ASM)
 # Set C++ standard
@@ -43,8 +44,15 @@ target_sources(TEMP_SENSOR_C PRIVATE ${SRC})
 # Include current directory for lwipopts.h
 target_include_directories(TEMP_SENSOR_C PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
+#include(pico_lwip_mqtt.cmake)
+
 # Link libraries
-target_link_libraries(TEMP_SENSOR_C pico_stdlib pico_cyw43_arch_lwip_poll hardware_spi hardware_i2c hardware_pwm)
+target_link_libraries(TEMP_SENSOR_C pico_stdlib pico_cyw43_arch_lwip_poll hardware_spi hardware_i2c hardware_pwm pico_lwip_mqtt)
+
+target_compile_definitions(TEMP_SENSOR_C PRIVATE
+        PICO_STACK_SIZE=0x2000  # 8KB stack
+)
+
 pico_add_extra_outputs(TEMP_SENSOR_C)
 
 # It always tries to rebuild picotool and can't - easier just to do it by hands

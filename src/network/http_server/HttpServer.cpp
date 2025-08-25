@@ -33,7 +33,7 @@ struct http_connection_state
 
     size_t bytes_received;
     bool response_ready;
-    HTTPMessage *request;
+    HTTPMessage* request;
     bool request_ready;
 
     http_connection_state() : bytes_sent(0), bytes_queued(0), bytes_received(0), response_ready(false),
@@ -61,18 +61,12 @@ public:
             HTTP_SERVER_PRINT("❌ HTTP: Accept error: %d\n", err);
             return ERR_VAL;
         }
-
-        HTTP_SERVER_PRINT("✅ HTTP: New connection from %s:%d\n",
-                          ip4addr_ntoa(ip_2_ip4(&newpcb->remote_ip)), newpcb->remote_port);
-
-        // Set up client connection callbacks
         tcp_arg(newpcb, new http_connection_state());
         tcp_recv(newpcb, recv_callback);
         tcp_sent(newpcb, sent_callback);
         tcp_err(newpcb, error_callback);
         tcp_poll(newpcb, poll_callback, 4); // Poll every 2 seconds (4 * 0.5s)
 
-        // Set reasonable timeouts
         tcp_setprio(newpcb, TCP_PRIO_MIN);
 
         return ERR_OK;
@@ -96,27 +90,27 @@ public:
             return ERR_OK;
         }
 
-        if (package->tot_len > CONFIG::MAX_REQUEST_SIZE - 1) {
+        if (package->tot_len > CONFIG::MAX_REQUEST_SIZE - 1)
+        {
             return ERR_VAL;
         }
         if (conn_state->request == nullptr)
         {
-            HTTP_SERVER_PRINT("HTTP: New message\n");
             conn_state->request = new HTTPMessage();
         }
 
         char request_buffer[CONFIG::MAX_REQUEST_SIZE];
         pbuf_copy_partial(package, request_buffer,
-                                            package->tot_len, 0);
+                          package->tot_len, 0);
 
         HttpServerHelpers::parse_request_package(request_buffer, *conn_state->request);
 
         std::string response;
-        switch (const auto type = determine_request_type(conn_state->request->start_line))
+        switch (determine_request_type(conn_state->request->start_line))
         {
         case StatusRequest:
-            response = HttpServerHelpers::build_status_api_response(EnvironmentSensor::readTemperature(), EnvironmentSensor::readHumidity());
-            HTTP_SERVER_PRINT("HTTP: Serving API request\n");
+            response = HttpServerHelpers::build_status_api_response(EnvironmentSensor::readTemperature(),
+                                                                    EnvironmentSensor::readHumidity());
             break;
         case ConfigRequest:
             response = HttpServerHelpers::build_freezer_config_page();
@@ -126,9 +120,14 @@ public:
             {
                 string ssid;
                 string pass;
-       
+
                 response = HttpServerHelpers::connection_request_handler(*conn_state->request, pass, ssid);
                 HTTP_SERVER_PRINT("HTTP: Handling connection response pass:%s ssid:%s\n", pass.c_str(), ssid.c_str());
+                if (!pass.empty() && !ssid.empty())
+                {
+                    get_wifi_service().schedule_connect_user_network(ssid, pass);
+                }
+                
                 break;
             }
         case ConnectivityCheck:
@@ -137,9 +136,8 @@ public:
             break;
         case GetSSIDs:
             {
-                uint8_t my_ssids[50][CONFIG::SSID_MAX_SIZE]{};
-                const int count = wifi_service.get_ssids(my_ssids, 50);
-                response = HttpServerHelpers::build_get_ssids_response(my_ssids, count);
+                const auto ssids = get_wifi_service().get_ssids();
+                response = HttpServerHelpers::build_get_ssids_response(ssids);
                 HTTP_SERVER_PRINT("HTTP: response:%s \n", response.c_str());
                 break;
             }
@@ -181,7 +179,6 @@ public:
         if (conn_state->bytes_sent >= conn_state->bytes_queued &&
             conn_state->bytes_queued >= conn_state->response_data.length())
         {
-            HTTP_SERVER_PRINT("HTTP: Response complete, closing connection\n");
             cleanup_connection(tpcb, conn_state);
         }
         else if (conn_state->bytes_queued < conn_state->response_data.length())
@@ -199,7 +196,6 @@ public:
 
     static err_t poll_callback(void* arg, tcp_pcb* tpcb)
     {
-        // Connection timeout - clean up
         HTTP_SERVER_PRINT("HTTP: Connection timeout, cleaning up\n");
         auto* conn_state = static_cast<http_connection_state*>(arg);
         cleanup_connection(tpcb, conn_state);
@@ -365,7 +361,6 @@ int HttpServer::init(uint16_t port)
     tcp_arg(server_pcb, this);
     tcp_accept(server_pcb, HttpServerCommunication::accept_callback);
 
-    HTTP_SERVER_PRINT("🎉 HTTP: Server successfully listening on port %d\n", port);
     return 0;
 }
 

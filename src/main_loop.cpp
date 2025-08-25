@@ -16,36 +16,53 @@ void loop()
     static uint32_t last_blink_time = 0;
     static uint32_t last_display_update = 0;
     static uint32_t last_ssids_update = 0;
+    static uint32_t last_wifi_ping = 0;
     static bool led_state = false;
 
     const uint32_t current_time = to_ms_since_boot(get_absolute_time());
-    
+
     // Blink LED (non-blocking)
-    if (current_time - last_blink_time >= CONFIG::DIODE_SLEEP_DURATION) {
+    if (current_time - last_blink_time >= CONFIG::DIODE_SLEEP_DURATION)
+    {
         led_state = !led_state;
         gpio_put(CONFIG::RED_DIODE, led_state);
         last_blink_time = current_time;
     }
-    
+
+    if (get_wifi_service().mode == WifiScanningMode) 
+    {
+        if (current_time - get_wifi_service().get_scan_start_time() > 2000) 
+        {
+            get_wifi_service().force_scan_completion();
+        }
+    }
+
     // Update display every 500ms (so it's responsive but not too frequent)
-    if (current_time - last_display_update >= 500) {
+    if (current_time - last_display_update >= 500)
+    {
         Paint_DrawString_EN(5, 0, "Temperature: ", &Font12, WHITE, BLACK);
         Paint_DrawNum(90, 0, EnvironmentSensor::readTemperature(), &Font12, 2, WHITE, BLACK);
-        
+
         Paint_DrawString_EN(5, 30, "Humidity: ", &Font12, WHITE, BLACK);
         Paint_DrawNum(90, 30, EnvironmentSensor::readHumidity(), &Font12, 2, WHITE, BLACK);
-        
+
         OLED_1in3_C_Display(BlackImage);
         Paint_Clear(BLACK);
-        
+
         last_display_update = current_time;
     }
 
-    if (current_time - last_ssids_update >= 5000 && wifi_service.mode != WifiScanningMode)
+    if (current_time - last_ssids_update >= 20000 && get_wifi_service().mode == CaptivePortalMode)
     {
-        wifi_service.discover_identifiers();
+        get_wifi_service().discover_identifiers();
+        last_ssids_update = current_time;
     }
-    
-    cyw43_arch_poll();  // Process Wi-Fi events
+
+    if (current_time - last_wifi_ping >= 500)
+    {
+        cyw43_arch_poll();
+        get_wifi_service().ping();
+        last_wifi_ping = current_time;
+    }
     sleep_ms(10);
 }
