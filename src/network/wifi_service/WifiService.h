@@ -6,6 +6,7 @@
 #define WIFISERVICE_H
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "src/config.h"
 
@@ -17,6 +18,8 @@ enum wifi_mode
     CaptivePortalMode,
     StationMode,
     WifiScanningMode,
+    ScheduleStationMode,
+    RecoveringMode,
 };
 
 class WifiService {
@@ -29,14 +32,18 @@ public:
     }
 
     ~WifiService();
+    [[nodiscard]] uint32_t get_scan_start_time() const;
+    void force_scan_completion();
 
     wifi_mode mode;
 
     int discover_identifiers();
     int turn_on_captive_portal();
-    int get_ssids(uint8_t ssids[][CONFIG::SSID_MAX_SIZE], int max_count) const;
-    int connect_user_network(const std::string& ssid, const std::string& password);
-    void ping() const;
+    [[nodiscard]] std::vector<std::string> get_ssids() const;
+    int connect_user_network();
+    int schedule_connect_user_network(const std::string& ssid, const std::string& password);
+
+    void ping();
 };
 
 

@@ -56,7 +56,7 @@ int init()
 
     printf("AP initiation \n");
 
-    wifi_service.turn_on_captive_portal();
+    get_wifi_service().turn_on_captive_portal();
 
     return 0;
 }
@@ -69,4 +69,9 @@ void setupUART()
     
     stdio_init_all();
     printf("UART initiated \n");
+}
+
+WifiService& get_wifi_service() {
+    static WifiService instance = WifiService::instance();
+    return instance;
 }

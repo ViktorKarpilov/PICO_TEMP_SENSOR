@@ -29,6 +29,14 @@ void loop()
         last_blink_time = current_time;
     }
 
+    if (get_wifi_service().mode == WifiScanningMode) 
+    {
+        if (current_time - get_wifi_service().get_scan_start_time() > 2000) 
+        {
+            get_wifi_service().force_scan_completion();
+        }
+    }
+
     // Update display every 500ms (so it's responsive but not too frequent)
     if (current_time - last_display_update >= 500)
     {
@@ -44,15 +52,17 @@ void loop()
         last_display_update = current_time;
     }
 
-    if (current_time - last_ssids_update >= 5000 && wifi_service.mode == CaptivePortalMode)
+    if (current_time - last_ssids_update >= 20000 && get_wifi_service().mode == CaptivePortalMode)
     {
-        wifi_service.discover_identifiers();
+        get_wifi_service().discover_identifiers();
+        last_ssids_update = current_time;
     }
 
-    if (current_time - last_wifi_ping >= 100)
+    if (current_time - last_wifi_ping >= 500)
     {
         cyw43_arch_poll();
-        wifi_service.ping();
+        get_wifi_service().ping();
+        last_wifi_ping = current_time;
     }
     sleep_ms(10);
 }

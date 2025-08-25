@@ -5,7 +5,7 @@ services:
     ports:
       - "1883:1883"
     volumes:
-      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf  # Add this line
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
   
   influxdb:
     image: influxdb:2
@@ -21,12 +21,13 @@ services:
       - ./telegraf.conf:/etc/telegraf/telegraf.conf
     env_file: .env
     
-  ip-beacon:
-    build:
-      context: ./IpBeacon
-      dockerfile: Dockerfile
-    ports:
-      - "8888:8888/udp"
-    volumes:
-      - ./IpBeacon/appsettings.json:/app/appsettings.json
-    restart: unless-stopped
+# Need to know somehow ip of machine if in container
+#  ip-beacon:
+#    build:
+#      context: ./IpBeacon
+#      dockerfile: Dockerfile
+#    ports:
+#      - "8888:8888/udp"
+#    volumes:
+#      - ./IpBeacon/appsettings.json:/app/appsettings.json
+#    restart: unless-stopped

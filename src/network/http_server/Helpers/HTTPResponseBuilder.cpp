@@ -156,17 +156,16 @@ namespace HttpServerHelpers
             "\r\n" + json;
     }
 
-    string build_get_ssids_response(uint8_t ssids[][32], const int count)
+    string build_get_ssids_response(const std::vector<std::string>& ssids)
     {
         std::string body = "{\"ssids\":[";
     
-        for (int i = 0; i < count; ++i)
+        for (int i = 0; i < ssids.size(); ++i)
         {
             if (i > 0) body.append(",");
         
-            const int len = strnlen(reinterpret_cast<const char*>(ssids[i]), 32);
-            body.append("\""); 
-            body.append(std::string(reinterpret_cast<const char*>(ssids[i]), len));
+            body.append("\"");
+            body.append(ssids[i]);
             body.append("\"");
         }
     

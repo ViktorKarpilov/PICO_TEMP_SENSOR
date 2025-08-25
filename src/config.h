@@ -58,6 +58,12 @@ namespace CONFIG
 
     // UDP SERVER CONFIG
     constexpr const char* MQTT_CALL_MESSAGE = "FIND_MQTT_BROKER";
+    constexpr int BEACON_PORT = 8888;
+
+    // MQTT CONFIG
+    constexpr const char* MQTT_TOPIC = "environment";
+    constexpr const char* MQTT_CLIENT = "sensor";
+    constexpr int MQTT_CONNECTION_PORT = 1883;
 }
 
 #endif //CONFIG_H

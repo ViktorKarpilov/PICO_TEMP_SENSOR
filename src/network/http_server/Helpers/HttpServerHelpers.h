@@ -38,7 +38,7 @@ namespace HttpServerHelpers
 
     std::string build_status_api_response(double temperature, double humidity);
 
-    std::string build_get_ssids_response(uint8_t ssids[][32], const int count);
+    std::string build_get_ssids_response(const std::vector<std::string>& ssids);
 
     std::string build_error_response();
 

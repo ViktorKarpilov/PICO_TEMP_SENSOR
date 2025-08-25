@@ -4,14 +4,16 @@
 
 #ifndef UDPSERVER_H
 #define UDPSERVER_H
+#include <optional>
+
 #include "lwip/ip_addr.h"
 #include "lwip/udp.h"
 
 struct UpdServerState
 {
-    udp_pcb* broadcast_pcb = nullptr;
-    udp_pcb* listener_pcb = nullptr;
-    const ip_addr_t* mqtt_broker_addr = nullptr;
+    // udp_pcb* broadcast_pcb{nullptr};
+    udp_pcb* listener_pcb{nullptr};
+    std::optional<ip_addr_t> mqtt_broker_addr{};
 };
 
 
